@@ -104,11 +104,11 @@ fun SearchBar() {
             placeholder = { Text("Search") },
             trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White,
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
             )
         )
     }
