@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">MobileDev</string>
+    <string name="city_illustration">City illustration</string>
+    <string name="citytrip">CityTrip</string>
+    <string name="gcm_defaultSenderId" translatable="false">658039032024</string>
+    <string name="google_api_key" translatable="false">AIzaSyB2Tjd43pcR4EKeMUWYY4YOIqZ8Cdq1He4</string>
+    <string name="google_app_id" translatable="false">1:658039032024:android:c92fb55b9ed48fa6376fad</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyB2Tjd43pcR4EKeMUWYY4YOIqZ8Cdq1He4</string>
+    <string name="google_storage_bucket" translatable="false">citytrip-3b4d3.firebasestorage.app</string>
+    <string name="login">Login</string>
+    <string name="password">Password</string>
+    <string name="project_id" translatable="false">citytrip-3b4d3</string>
+    <string name="submit">Submit</string>
+    <string name="username">Username</string>
+    <style name="Theme.MobileDev" parent="android:Theme.Material.Light.NoActionBar"/>
+</resources>

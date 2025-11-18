@@ -17,26 +17,24 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 
 class MainActivity : ComponentActivity() {
-    private val auth: FirebaseAuth = Firebase.auth
-    private val db: FirebaseFirestore = Firebase.firestore
+    private val auth: FirebaseAuth by lazy { Firebase.auth }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (auth.currentUser != null){
-            navigateToMainScreen()
-        }
         setContent {
             MobileDevTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LoginScreen() // This calls your separate LoginScreen composable
+                    if (auth.currentUser != null) {
+                        MainScreen()
+                    } else {
+                        LoginScreen() // This calls your separate LoginScreen composable
+                    }
                 }
             }
         }
-    }
-    private fun navigateToMainScreen() {
-        // Later implementeren
     }
 }

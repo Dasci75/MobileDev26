@@ -1,5 +1,6 @@
 package com.example.mobiledev
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -15,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -23,7 +23,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     auth: FirebaseAuth = Firebase.auth,
-    db: FirebaseFirestore = Firebase.firestore
+    db: FirebaseFirestore = Firebase.firestore,
+    onLoginSuccess: () -> Unit = {}
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -117,7 +118,8 @@ fun LoginScreen(
                                     isLoading = false
                                     if (task.isSuccessful) {
                                         // Login successful
-                                        errorMessage = "Login succesvol!"
+                                        val intent = Intent(context, MainActivity::class.java)
+                                        context.startActivity(intent)
                                     } else {
                                         errorMessage = "Login mislukt: ${task.exception?.message}"
                                     }
