@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
 
@@ -177,9 +179,11 @@ fun RatingBar(rating: Float) {
     }
 }
 
-
 @Composable
 fun BottomNavigationBar(navController: NavController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     BottomAppBar(
         containerColor = Color(0xFFF9A825) // Orange
     ) {
@@ -189,13 +193,13 @@ fun BottomNavigationBar(navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = { navController.navigate("main") }) {
-                Text("Home", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Home", color = Color.White, fontWeight = if (currentRoute == "main") FontWeight.Bold else FontWeight.Normal)
             }
-            TextButton(onClick = { /*TODO*/ }) {
-                Text("Dashboard", color = Color.White)
+            TextButton(onClick = { /* TODO: Implement Dashboard */ }) {
+                Text("Dashboard", color = Color.White, fontWeight = if (currentRoute == "dashboard") FontWeight.Bold else FontWeight.Normal)
             }
-            TextButton(onClick = { /*TODO*/ }) {
-                Text("Settings", color = Color.White)
+            TextButton(onClick = { navController.navigate("settings") }) {
+                Text("Settings", color = Color.White, fontWeight = if (currentRoute == "settings") FontWeight.Bold else FontWeight.Normal)
             }
         }
     }

@@ -45,6 +45,9 @@ class MainActivity : ComponentActivity() {
                             val tripId = backStackEntry.arguments?.getString("tripId")
                             TripDetailsScreen(tripId = tripId, navController = navController)
                         }
+                        composable("settings") {
+                            SettingsScreen(navController = navController, auth = auth)
+                        }
                     }
                 }
             }
