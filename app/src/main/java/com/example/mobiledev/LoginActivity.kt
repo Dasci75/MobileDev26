@@ -1,6 +1,5 @@
 package com.example.mobiledev
 
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -32,7 +31,6 @@ fun LoginScreen(
     var errorMessage by remember { mutableStateOf("") }
     var isLoginMode by remember { mutableStateOf(true) } // true = login, false = register
 
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -117,9 +115,7 @@ fun LoginScreen(
                                 .addOnCompleteListener { task ->
                                     isLoading = false
                                     if (task.isSuccessful) {
-                                        // Login successful
-                                        val intent = Intent(context, MainActivity::class.java)
-                                        context.startActivity(intent)
+                                        onLoginSuccess()
                                     } else {
                                         errorMessage = "Login mislukt: ${task.exception?.message}"
                                     }

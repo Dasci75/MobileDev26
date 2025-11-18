@@ -25,6 +25,7 @@ anim btn_radio_to_on_mtrl_ring_outer_animation
 anim btn_radio_to_on_mtrl_ring_outer_path_animation
 attr SharedValue
 attr SharedValueId
+attr action
 attr actionBarDivider
 attr actionBarItemBackground
 attr actionBarPopupTheme
@@ -71,6 +72,7 @@ attr animateCircleAngleTo
 attr animateRelativeTo
 attr applyMotionScene
 attr arcMode
+attr argType
 attr arrowHeadLength
 attr arrowShaftLength
 attr attributeName
@@ -179,12 +181,15 @@ attr customNavigationLayout
 attr customPixelDimension
 attr customReference
 attr customStringValue
+attr data
+attr dataPattern
 attr defaultDuration
 attr defaultQueryHint
 attr defaultState
 attr deltaPolarAngle
 attr deltaPolarRadius
 attr deriveConstraintsFrom
+attr destination
 attr dialogCornerRadius
 attr dialogPreferredPadding
 attr dialogTheme
@@ -214,6 +219,8 @@ attr editTextBackground
 attr editTextColor
 attr editTextStyle
 attr elevation
+attr enterAnim
+attr exitAnim
 attr expandActivityOverflowButtonDrawable
 attr firstBaselineToTopHeight
 attr flow_firstHorizontalBias
@@ -251,6 +258,7 @@ attr fontWeight
 attr framePosition
 attr gapBetweenBars
 attr goIcon
+attr graph
 attr grid_columnWeights
 attr grid_columns
 attr grid_horizontalGaps
@@ -287,6 +295,7 @@ attr itemPadding
 attr keyPositionType
 attr lStar
 attr lastBaselineToBottomHeight
+attr launchSingleTop
 attr layout
 attr layoutDescription
 attr layoutDuringTransition
@@ -375,6 +384,7 @@ attr maxWidth
 attr measureWithLargestChild
 attr menu
 attr methodName
+attr mimeType
 attr minHeight
 attr minWidth
 attr mock_diagonalsColor
@@ -401,11 +411,13 @@ attr motion_postLayoutCollision
 attr motion_triggerOnCollision
 attr moveWhenScrollAtTop
 attr multiChoiceItemLayout
+attr navGraph
 attr navigationContentDescription
 attr navigationIcon
 attr navigationMode
 attr nestedScrollFlags
 attr nestedScrollViewStyle
+attr nullable
 attr numericModifiers
 attr onCross
 attr onHide
@@ -433,6 +445,11 @@ attr perpendicularPath_percent
 attr pivotAnchor
 attr placeholder_emptyVisibility
 attr polarRelativeTo
+attr popEnterAnim
+attr popExitAnim
+attr popUpTo
+attr popUpToInclusive
+attr popUpToSaveState
 attr popupMenuStyle
 attr popupTheme
 attr popupWindowStyle
@@ -457,9 +474,11 @@ attr region_heightLessThan
 attr region_heightMoreThan
 attr region_widthLessThan
 attr region_widthMoreThan
+attr restoreState
 attr rotationCenterId
 attr round
 attr roundPercent
+attr route
 attr saturation
 attr scaleFromTextSize
 attr scopeUris
@@ -489,6 +508,7 @@ attr springStiffness
 attr springStopThreshold
 attr srcCompat
 attr staggered
+attr startDestination
 attr stateLabels
 attr state_above_anchor
 attr subMenuArrow
@@ -503,6 +523,7 @@ attr switchPadding
 attr switchStyle
 attr switchTextAppearance
 attr targetId
+attr targetPackage
 attr telltales_tailColor
 attr telltales_tailScale
 attr telltales_velocityMode
@@ -573,6 +594,7 @@ attr triggerReceiver
 attr triggerSlack
 attr ttcIndex
 attr upDuration
+attr uri
 attr viewInflaterClass
 attr viewTransitionMode
 attr viewTransitionOnCross
@@ -1091,6 +1113,7 @@ id chronometer
 id clockwise
 id closest
 id collapseActionView
+id compose_prefetch_scheduler
 id compose_view_saveable_id_tag
 id constraint
 id consume_window_insets_tag
@@ -1180,6 +1203,7 @@ id message
 id middle
 id motion_base
 id multiply
+id nav_controller_view_tag
 id never
 id neverCompleteToEnd
 id neverCompleteToStart
@@ -1402,6 +1426,7 @@ string android_credentials_TYPE_PASSWORD_CREDENTIAL
 string androidx_credentials_TYPE_PUBLIC_KEY_CREDENTIAL
 string androidx_startup
 string app_name
+string autofill
 string call_notification_answer_action
 string call_notification_answer_video_action
 string call_notification_decline_action
@@ -1511,6 +1536,7 @@ string range_end
 string range_start
 string search_menu_title
 string selected
+string snackbar_pane_title
 string state_empty
 string state_off
 string state_on
@@ -1686,7 +1712,6 @@ style Base_Widget_AppCompat_Toolbar_Button_Navigation
 style DialogWindowTheme
 style EdgeToEdgeFloatingDialogTheme
 style EdgeToEdgeFloatingDialogWindowTheme
-style FloatingDialogTheme
 style FloatingDialogWindowTheme
 style Platform_AppCompat
 style Platform_AppCompat_Light
@@ -1885,6 +1910,7 @@ styleable ActionMenuItemView android_minWidth
 styleable ActionMenuView
 styleable ActionMode background backgroundSplit closeItemLayout height subtitleTextStyle titleTextStyle
 styleable ActivityChooserView expandActivityOverflowButtonDrawable initialActivityCount
+styleable ActivityNavigator android_name action data dataPattern targetPackage
 styleable AlertDialog android_layout buttonIconDimen buttonPanelSideLayout listItemLayout listLayout multiChoiceItemLayout showTitle singleChoiceItemLayout
 styleable AnimatedStateListDrawableCompat android_dither android_visible android_variablePadding android_constantSize android_enterFadeDuration android_exitFadeDuration
 styleable AnimatedStateListDrawableItem android_id android_drawable
@@ -1938,6 +1964,13 @@ styleable MotionLabel android_textSize android_typeface android_textStyle androi
 styleable MotionLayout applyMotionScene currentState layoutDescription motionDebug motionProgress showPaths
 styleable MotionScene defaultDuration layoutDuringTransition
 styleable MotionTelltales telltales_tailColor telltales_tailScale telltales_velocityMode
+styleable NavAction android_id destination enterAnim exitAnim launchSingleTop popEnterAnim popExitAnim popUpTo popUpToInclusive popUpToSaveState restoreState
+styleable NavArgument android_name android_defaultValue argType nullable
+styleable NavDeepLink android_autoVerify action mimeType uri
+styleable NavGraphNavigator startDestination
+styleable NavHost navGraph
+styleable NavInclude graph
+styleable Navigator android_label android_id route
 styleable OnClick clickAction targetId
 styleable OnSwipe autoCompleteMode dragDirection dragScale dragThreshold limitBoundsTo maxAcceleration maxVelocity moveWhenScrollAtTop nestedScrollFlags onTouchUp rotationCenterId springBoundary springDamping springMass springStiffness springStopThreshold touchAnchorId touchAnchorSide touchRegionId
 styleable PopupWindow android_popupBackground android_popupAnimationStyle overlapAnchor

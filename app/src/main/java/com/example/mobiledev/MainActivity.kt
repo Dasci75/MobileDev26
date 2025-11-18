@@ -7,14 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.google.firebase.Firebase
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.example.mobiledev.ui.theme.MobileDevTheme
-import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.firestore
-import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : ComponentActivity() {
     private val auth: FirebaseAuth by lazy { Firebase.auth }
@@ -28,10 +27,24 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (auth.currentUser != null) {
-                        MainScreen()
-                    } else {
-                        LoginScreen() // This calls your separate LoginScreen composable
+                    val navController = rememberNavController()
+                    val startDestination = if (auth.currentUser != null) "main" else "login"
+
+                    NavHost(navController = navController, startDestination = startDestination) {
+                        composable("login") {
+                            LoginScreen(onLoginSuccess = {
+                                navController.navigate("main") {
+                                    popUpTo("login") { inclusive = true } // Prevents going back to login
+                                }
+                            })
+                        }
+                        composable("main") {
+                            MainScreen(navController = navController)
+                        }
+                        composable("tripDetails/{tripId}") { backStackEntry ->
+                            val tripId = backStackEntry.arguments?.getString("tripId")
+                            TripDetailsScreen(tripId = tripId, navController = navController)
+                        }
                     }
                 }
             }

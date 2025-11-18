@@ -1,6 +1,7 @@
 package com.example.mobiledev
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
 
 data class Trip(
@@ -37,10 +40,10 @@ val dummyTrips = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(navController: NavController) {
     Scaffold(
         topBar = { TopBar() },
-        bottomBar = { BottomNavigationBar() },
+        bottomBar = { BottomNavigationBar(navController = navController) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { /* TODO: Handle add trip */ },
@@ -58,7 +61,7 @@ fun MainScreen() {
                 .background(Color(0xFFF5F5F5)) // Light gray background
         ) {
             SearchBar()
-            TripList(trips = dummyTrips)
+            TripList(trips = dummyTrips, navController = navController)
         }
     }
 }
@@ -115,21 +118,23 @@ fun SearchBar() {
 }
 
 @Composable
-fun TripList(trips: List<Trip>) {
+fun TripList(trips: List<Trip>, navController: NavController) {
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(trips) { trip ->
-            TripItem(trip = trip)
+            TripItem(trip = trip, navController = navController)
         }
     }
 }
 
 @Composable
-fun TripItem(trip: Trip) {
+fun TripItem(trip: Trip, navController: NavController) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { navController.navigate("tripDetails/${trip.id}") },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF9A825)) // Orange
     ) {
@@ -174,7 +179,7 @@ fun RatingBar(rating: Float) {
 
 
 @Composable
-fun BottomNavigationBar() {
+fun BottomNavigationBar(navController: NavController) {
     BottomAppBar(
         containerColor = Color(0xFFF9A825) // Orange
     ) {
@@ -183,7 +188,7 @@ fun BottomNavigationBar() {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = { /*TODO*/ }) {
+            TextButton(onClick = { navController.navigate("main") }) {
                 Text("Home", color = Color.White, fontWeight = FontWeight.Bold)
             }
             TextButton(onClick = { /*TODO*/ }) {
@@ -200,6 +205,6 @@ fun BottomNavigationBar() {
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
-        MainScreen()
+        MainScreen(rememberNavController())
     }
 }
