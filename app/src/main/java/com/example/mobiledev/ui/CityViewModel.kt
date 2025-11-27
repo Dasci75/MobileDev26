@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import com.google.firebase.firestore.Source
 
 sealed interface CityUiState {
     data class Success(val cities: List<String>) : CityUiState
@@ -26,15 +25,15 @@ class CityViewModel(private val countryName: String) : ViewModel() {
     val cityState: StateFlow<CityUiState> = _cityState.asStateFlow()
 
     init {
-        getCities(Source.DEFAULT)
+        getCities()
     }
 
-    fun getCities(source: Source) {
+    fun getCities() {
         viewModelScope.launch {
             _cityState.value = CityUiState.Loading
             try {
                 val db = Firebase.firestore
-                val result = db.collection("trips").whereEqualTo("country", countryName).get(source).await()
+                val result = db.collection("trips").whereEqualTo("country", countryName).get().await()
                 val cities = result.toObjects(Trip::class.java).mapNotNull { it.cityId }.distinct()
                 _cityState.value = CityUiState.Success(cities)
             } catch (e: Exception) {
@@ -45,7 +44,7 @@ class CityViewModel(private val countryName: String) : ViewModel() {
     }
 
     fun refresh() {
-        getCities(Source.SERVER)
+        getCities()
     }
 }
 

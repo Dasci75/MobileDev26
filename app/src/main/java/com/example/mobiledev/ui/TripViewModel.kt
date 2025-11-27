@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import com.google.firebase.firestore.Source
 
 sealed interface TripUiState {
     data class Success(val trips: List<Trip>) : TripUiState
@@ -19,21 +18,21 @@ sealed interface TripUiState {
     object Loading : TripUiState
 }
 
-class TripViewModel : ViewModel() {
+open class TripViewModel : ViewModel() {
 
     private val _tripState = MutableStateFlow<TripUiState>(TripUiState.Loading)
-    val tripState: StateFlow<TripUiState> = _tripState.asStateFlow()
+    open val tripState: StateFlow<TripUiState> = _tripState.asStateFlow()
 
     init {
-        getTrips(Source.DEFAULT)
+        getTrips()
     }
 
-    fun getTrips(source: Source) {
+    fun getTrips() {
         viewModelScope.launch {
             _tripState.value = TripUiState.Loading
             try {
                 val db = Firebase.firestore
-                val result = db.collection("trips").get(source).await()
+                val result = db.collection("trips").get().await()
                 val trips = result.documents.map { document ->
                     document.toObject(Trip::class.java)?.copy(id = document.id)
                 }.filterNotNull()
@@ -46,6 +45,6 @@ class TripViewModel : ViewModel() {
     }
 
     fun refresh() {
-        getTrips(Source.SERVER)
+        getTrips()
     }
 }

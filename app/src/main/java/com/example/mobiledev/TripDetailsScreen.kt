@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,17 +17,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import coil.compose.AsyncImage
 import com.example.mobiledev.data.Trip
-import com.example.mobiledev.ui.TripViewModel
 import com.example.mobiledev.ui.TripUiState
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobiledev.ui.TripViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun TripDetailsScreen(
@@ -91,67 +96,83 @@ fun DetailTopBar(trip: Trip) {
 
 @Composable
 fun TripDetailsContent(trip: Trip) {
+    val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault())
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxWidth()
     ) {
-        // Main Image
+        // Main Image (photo1)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            // Placeholder for the image
-            Box(
+            val mainImageUrl = trip.photoUrl?.get("photo1")
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(mainImageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "${trip.name} main image",
                 modifier = Modifier
                     .height(200.dp)
                     .fillMaxWidth()
-                    .background(Color.Gray)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Gray) // Placeholder background
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            // Small Images
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Placeholder for small image 1
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Gray)
-                )
-                // Placeholder for small image 2
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Gray)
-                )
-                 // Placeholder for small image 3
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Gray)
-                )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Small Images (photo2, photo3, photo4)
+            val photoKeys = listOf("photo2", "photo3", "photo4")
+            val photos = photoKeys.mapNotNull { key ->
+                trip.photoUrl?.get(key)?.let { url -> key to url }
             }
-            // Address Box
+
+            if (photos.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    photos.forEach { (_, photoUrl) ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(photoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "${trip.name} additional image",
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.Gray) // Placeholder background
+                        )
+                    }
+                }
+            }
+            
+            // Location and Category Box
             Card(
                 shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)),
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text(text = "Adres en info", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(text = "Details", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = trip.location ?: "", fontSize = 10.sp)
+                    Text(text = "Locatie: Lat ${trip.latitude ?: "N/A"}, Lon ${trip.longitude ?: "N/A"}", fontSize = 10.sp)
+                    Text(text = "Categorie: ${trip.category ?: ""}", fontSize = 10.sp)
+                    trip.createdAt?.let {
+                        Text(text = "Toegevoegd: ${dateFormat.format(it.toDate())}", fontSize = 10.sp)
+                    }
                 }
             }
-
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -164,6 +185,10 @@ fun TripDetailsContent(trip: Trip) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Rating Bar
+        RatingBar(rating = trip.rating ?: 0.0)
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Review Button
         Button(
             onClick = { /* TODO: Handle Review action */ },
@@ -175,14 +200,5 @@ fun TripDetailsContent(trip: Trip) {
         ) {
             Text(text = "Review", color = Color.White, fontSize = 18.sp)
         }
-    }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun TripDetailsScreenPreview() {
-    MobileDevTheme {
-        TripDetailsScreen(tripId = "1", navController = rememberNavController())
     }
 }

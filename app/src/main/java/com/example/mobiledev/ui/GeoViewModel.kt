@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import com.google.firebase.firestore.Source
 
 sealed interface CountryUiState {
     data class Success(val countries: List<String>) : CountryUiState
@@ -25,15 +24,15 @@ class GeoViewModel : ViewModel() {
     val countryState: StateFlow<CountryUiState> = _countryState.asStateFlow()
 
     init {
-        getCountries(Source.DEFAULT)
+        getCountries()
     }
 
-    fun getCountries(source: Source) {
+    fun getCountries() {
         viewModelScope.launch {
             _countryState.value = CountryUiState.Loading
             try {
                 val db = Firebase.firestore
-                val result = db.collection("trips").get(source).await()
+                val result = db.collection("trips").get().await()
                 val countries = result.toObjects(Trip::class.java).mapNotNull { it.country }.distinct()
                 _countryState.value = CountryUiState.Success(countries)
             } catch (e: Exception) {
@@ -44,6 +43,6 @@ class GeoViewModel : ViewModel() {
     }
 
     fun refresh() {
-        getCountries(Source.SERVER)
+        getCountries()
     }
 }
