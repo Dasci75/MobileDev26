@@ -34,7 +34,9 @@ class TripViewModel : ViewModel() {
             try {
                 val db = Firebase.firestore
                 val result = db.collection("trips").get(source).await()
-                val trips = result.toObjects(Trip::class.java)
+                val trips = result.documents.map { document ->
+                    document.toObject(Trip::class.java)?.copy(id = document.id)
+                }.filterNotNull()
                 _tripState.value = TripUiState.Success(trips)
             } catch (e: Exception) {
                 Log.e("TripViewModel", "Error fetching trips", e)
