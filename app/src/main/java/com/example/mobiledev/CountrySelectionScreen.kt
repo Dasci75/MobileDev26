@@ -28,71 +28,46 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CountrySelectionScreen(
     navController: NavController,
-    geoViewModel: GeoViewModel = viewModel()
+    geoViewModel: GeoViewModel = viewModel(),
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     val uiState by geoViewModel.countryState.collectAsState()
 
-    Scaffold(
-        topBar = { CountrySelectionTopBar() }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
-            when (val state = uiState) {
-                is CountryUiState.Loading -> CircularProgressIndicator()
-                is CountryUiState.Error -> Text("Error: Could not load countries.")
-                is CountryUiState.Success -> {
-                    PullToRefreshBox(
-                        isRefreshing = uiState is CountryUiState.Loading,
-                        onRefresh = { geoViewModel.refresh() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues), // Apply padding from parent Scaffold
+        contentAlignment = Alignment.Center
+    ) {
+        when (val state = uiState) {
+            is CountryUiState.Loading -> CircularProgressIndicator()
+            is CountryUiState.Error -> Text("Error: Could not load countries.")
+            is CountryUiState.Success -> {
+                PullToRefreshBox(
+                    isRefreshing = uiState is CountryUiState.Loading,
+                    onRefresh = { geoViewModel.refresh() }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5)),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFFF5F5F5)),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(state.countries) { country ->
-                                CountryItem(country = country, navController = navController)
-                            }
+                        items(state.countries) { country ->
+                            CountryItem(country = country, navController = navController)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun CountrySelectionTopBar() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9A825)) // Orange
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "CityTrip",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Select a Country",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 

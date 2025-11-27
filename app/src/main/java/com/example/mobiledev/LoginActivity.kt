@@ -19,11 +19,15 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+
 @Composable
 fun LoginScreen(
     auth: FirebaseAuth = Firebase.auth,
     db: FirebaseFirestore = Firebase.firestore,
-    onLoginSuccess: () -> Unit = {}
+    onLoginSuccess: () -> Unit = {},
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -36,6 +40,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(paddingValues) // Apply padding from parent Scaffold
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -191,7 +196,7 @@ fun LoginScreenPreview() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            LoginScreen()
+            LoginScreen(paddingValues = PaddingValues(0.dp))
         }
     }
 }

@@ -42,6 +42,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale // Ensure ContentScale is imported
+import com.example.mobiledev.ui.RatingBar // Import the common RatingBar
+import com.example.mobiledev.ui.Screen
 
 private const val TAG = "MainScreen"
 
@@ -50,7 +52,8 @@ private const val TAG = "MainScreen"
 fun MainScreen(
     navController: NavController,
     city: String? = null,
-    tripViewModel: TripViewModel = viewModel()
+    tripViewModel: TripViewModel = viewModel(),
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
 
@@ -61,48 +64,34 @@ fun MainScreen(
         currentOnGetTrips()
     }
 
-    Scaffold(
-        topBar = { TopBar() },
-        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: Handle add trip */ },
-                shape = CircleShape,
-                containerColor = Color(0xFFF9A825) // Orange
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add", tint = Color.White)
+    Column(
+        modifier = Modifier
+            .padding(paddingValues) // Apply padding from parent Scaffold
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5)) // Light gray background
+    ) {
+        SearchBar(navController = navController)
+        when (val state = tripState) {
+            is TripUiState.Loading -> {
+                Log.d(TAG, "TripUiState: Loading")
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5)) // Light gray background
-        ) {
-            SearchBar(navController = navController)
-            when (val state = tripState) {
-                is TripUiState.Loading -> {
-                    Log.d(TAG, "TripUiState: Loading")
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+            is TripUiState.Error -> {
+                Log.d(TAG, "TripUiState: Error")
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error fetching trips")
                 }
-                is TripUiState.Error -> {
-                    Log.d(TAG, "TripUiState: Error")
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Error fetching trips")
-                    }
+            }
+            is TripUiState.Success -> {
+                Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
+                val tripsToShow = if (city != null) {
+                    state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
+                } else {
+                    state.trips
                 }
-                is TripUiState.Success -> {
-                    Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
-                    val tripsToShow = if (city != null) {
-                        state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
-                    } else {
-                        state.trips
-                    }
-                    TripList(trips = tripsToShow, navController = navController)
-                }
+                TripList(trips = tripsToShow, navController = navController)
             }
         }
     }
@@ -228,53 +217,10 @@ fun TripItem(trip: Trip, navController: NavController) {
     }
 }
 
-@Composable
-fun RatingBar(rating: Double) {
-    Row {
-        for (i in 1..5) {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = "Star",
-                tint = if (i <= rating) Color.White else Color.Gray,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun BottomNavigationBar(navController: NavController, tripViewModel: TripViewModel) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    BottomAppBar(
-        containerColor = Color(0xFFF9A825) // Orange
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = {
-                navController.navigate("main")
-            }) {
-                val isMainScreen = currentRoute?.startsWith("main") == true
-                Text("Home", color = Color.White, fontWeight = if (isMainScreen) FontWeight.Bold else FontWeight.Normal)
-            }
-            TextButton(onClick = { /* TODO: Implement Dashboard */ }) {
-                Text("Dashboard", color = Color.White, fontWeight = if (currentRoute == "dashboard") FontWeight.Bold else FontWeight.Normal)
-            }
-            TextButton(onClick = { navController.navigate("settings") }) {
-                Text("Settings", color = Color.White, fontWeight = if (currentRoute == "settings") FontWeight.Bold else FontWeight.Normal)
-            }
-        }
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
-        MainScreen(rememberNavController(), city = null)
+        MainScreen(rememberNavController(), city = null, paddingValues = PaddingValues(0.dp))
     }
 }

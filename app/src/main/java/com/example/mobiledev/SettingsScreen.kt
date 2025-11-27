@@ -22,51 +22,24 @@ import com.google.firebase.ktx.Firebase
 import com.example.mobiledev.ui.TripViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+
 @Composable
 fun SettingsScreen(
     navController: NavController,
     auth: FirebaseAuth,
-    tripViewModel: TripViewModel = viewModel()
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
-    Scaffold(
-        topBar = { SettingsTopBar() },
-        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5)), // Light gray background
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            LogoutButton(navController = navController, auth = auth)
-        }
-    }
-}
-
-@Composable
-fun SettingsTopBar() {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9A825)) // Orange
-            .padding(16.dp)
+            .padding(paddingValues) // Apply padding from parent Scaffold
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5)), // Light gray background
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "CityTrip",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Settings",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        LogoutButton(navController = navController, auth = auth)
     }
 }
 
@@ -87,10 +60,3 @@ fun LogoutButton(navController: NavController, auth: FirebaseAuth) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun SettingsScreenPreview() {
-    MobileDevTheme {
-        SettingsScreen(rememberNavController(), Firebase.auth)
-    }
-}

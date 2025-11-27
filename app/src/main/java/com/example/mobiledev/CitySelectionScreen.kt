@@ -29,14 +29,23 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CitySelectionScreen(
     navController: NavController,
-    countryName: String?
+    countryName: String?,
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     if (countryName == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), // Apply padding from parent Scaffold
+            contentAlignment = Alignment.Center
+        ) {
             Text("Country not specified.")
         }
         return
@@ -45,63 +54,34 @@ fun CitySelectionScreen(
     val cityViewModel: CityViewModel = viewModel(factory = CityViewModelFactory(countryName))
     val uiState by cityViewModel.cityState.collectAsState()
 
-    Scaffold(
-        topBar = { CitySelectionTopBar(countryName) }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
-            when (val state = uiState) {
-                is CityUiState.Loading -> CircularProgressIndicator()
-                is CityUiState.Error -> Text("Error: Could not load cities.")
-                is CityUiState.Success -> {
-                    PullToRefreshBox(
-                        isRefreshing = uiState is CityUiState.Loading,
-                        onRefresh = { cityViewModel.refresh() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues), // Apply padding from parent Scaffold
+        contentAlignment = Alignment.Center
+    ) {
+        when (val state = uiState) {
+            is CityUiState.Loading -> CircularProgressIndicator()
+            is CityUiState.Error -> Text("Error: Could not load cities.")
+            is CityUiState.Success -> {
+                PullToRefreshBox(
+                    isRefreshing = uiState is CityUiState.Loading,
+                    onRefresh = { cityViewModel.refresh() }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5)),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFFF5F5F5)),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(state.cities) { city ->
-                                CityItem(city = city, navController = navController)
-                            }
+                        items(state.cities) { city ->
+                            CityItem(city = city, navController = navController)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun CitySelectionTopBar(countryName: String?) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9A825)) // Orange
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "CityTrip",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Select a City in ${countryName ?: "..."}",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 

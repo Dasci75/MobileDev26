@@ -35,6 +35,8 @@ import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.TripUiState
 import com.example.mobiledev.ui.TripViewModel
 import com.example.mobiledev.ui.theme.MobileDevTheme
+import com.example.mobiledev.ui.RatingBar // Import the common RatingBar
+import androidx.compose.material.icons.filled.Star // Import Star icon
 import com.google.ai.client.generativeai.Chat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -42,16 +44,25 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripDetailsScreen(
     tripId: String?,
     navController: NavController,
-    tripViewModel: TripViewModel = viewModel()
+    tripViewModel: TripViewModel = viewModel(),
+    paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues), // Apply padding from parent Scaffold
+        contentAlignment = Alignment.Center
+    ) {
         when (val state = tripState) {
             is TripUiState.Loading -> CircularProgressIndicator()
             is TripUiState.Error -> Text("Error: Could not load trip details.")
@@ -60,59 +71,27 @@ fun TripDetailsScreen(
                 if (trip == null) {
                     Text("Trip not found")
                 } else {
-                    Scaffold(
-                        topBar = { DetailTopBar(trip = trip) },
-                        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) },
-                        floatingActionButton = {
-                            FloatingActionButton(
-                                onClick = { /* TODO: Implement join chat functionality */ },
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.navigationBarsPadding() // Adjust for nav bar
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.Chat, "Join Chat", tint = Color.White)
-                            }
-                        },
-                        floatingActionButtonPosition = FabPosition.End // Position FAB at bottom end
-                    ) { paddingValues ->
-                        Column(
-                            modifier = Modifier
-                                .padding(paddingValues)
-                                .fillMaxSize()
-                                .background(Color(0xFFF5F5F5))
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            TripDetailsContent(trip = trip)
-                        }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5))
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        TripDetailsContent(trip = trip)
+                    }
+                    FloatingActionButton(
+                        onClick = { /* TODO: Implement join chat functionality */ },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd) // Align to bottom end of the Box
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Chat, "Join Chat", tint = Color.White)
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun DetailTopBar(trip: Trip) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9A825)) // Orange
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "CityTrip",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = trip.name ?: "Unknown Trip",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
@@ -243,3 +222,5 @@ fun TripDetailsContent(trip: Trip) {
         }
     }
 }
+
+
