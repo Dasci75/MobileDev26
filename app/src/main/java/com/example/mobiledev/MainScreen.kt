@@ -1,5 +1,6 @@
 package com.example.mobiledev
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,11 +18,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +41,9 @@ import com.example.mobiledev.ui.theme.MobileDevTheme
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale // Ensure ContentScale is imported
+
+private const val TAG = "MainScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +53,13 @@ fun MainScreen(
     tripViewModel: TripViewModel = viewModel()
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
+
+    // Use LaunchedEffect to trigger data refresh when MainScreen is active
+    val currentOnGetTrips by rememberUpdatedState(tripViewModel::getTrips)
+    LaunchedEffect(key1 = Unit) {
+        Log.d(TAG, "MainScreen LaunchedEffect: Calling getTrips()")
+        currentOnGetTrips()
+    }
 
     Scaffold(
         topBar = { TopBar() },
@@ -70,16 +83,19 @@ fun MainScreen(
             SearchBar(navController = navController)
             when (val state = tripState) {
                 is TripUiState.Loading -> {
+                    Log.d(TAG, "TripUiState: Loading")
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
                 is TripUiState.Error -> {
+                    Log.d(TAG, "TripUiState: Error")
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Error fetching trips")
                     }
                 }
                 is TripUiState.Success -> {
+                    Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
                     val tripsToShow = if (city != null) {
                         state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
                     } else {
@@ -240,14 +256,7 @@ fun BottomNavigationBar(navController: NavController, tripViewModel: TripViewMod
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = {
-                tripViewModel.refresh()
-                navController.navigate("main") {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navController.navigate("main")
             }) {
                 val isMainScreen = currentRoute?.startsWith("main") == true
                 Text("Home", color = Color.White, fontWeight = if (isMainScreen) FontWeight.Bold else FontWeight.Normal)
