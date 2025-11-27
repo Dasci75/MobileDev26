@@ -34,6 +34,10 @@ import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.TripUiState
 import com.example.mobiledev.ui.TripViewModel
 import com.example.mobiledev.ui.theme.MobileDevTheme
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,26 +170,44 @@ fun TripItem(trip: Trip, navController: NavController) {
             .fillMaxWidth()
             .clickable { navController.navigate("tripDetails/${trip.id}") },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9A825)) // Orange
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Changed to surface for better contrast
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = trip.name ?: "", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
-                Text(text = trip.description ?: "", fontSize = 14.sp, color = Color.DarkGray)
+        Column {
+            val context = LocalContext.current
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(trip.photoUrl?.get("photo1"))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "${trip.name} main image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp) // Make image taller
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) // Rounded top corners
+                    .background(Color.Gray.copy(alpha = 0.5f)), // Placeholder background
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop // Crop to fill bounds
+            )
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = trip.name ?: "Unknown Trip",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 20.sp // Larger font for name
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = trip.description ?: "No description available.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2, // Limit description to 2 lines
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 RatingBar(rating = trip.rating ?: 0.0)
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Gray.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {}
         }
     }
 }
