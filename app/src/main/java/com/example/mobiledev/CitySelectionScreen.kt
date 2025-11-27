@@ -18,39 +18,70 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
-@Composable
-fun CitySelectionScreen(navController: NavController, country: String?) {
-    // Dummy data - in a real app, this would come from a database or API
-    val citiesByCountry = mapOf(
-        "Italy" to listOf("Rome", "Florence", "Venice"),
-        "France" to listOf("Paris", "Nice", "Lyon"),
-        "Spain" to listOf("Madrid", "Barcelona", "Seville"),
-        "USA" to listOf("New York", "Los Angeles", "Chicago"),
-        "Japan" to listOf("Tokyo", "Kyoto", "Osaka")
-    )
+import androidx.compose.runtime.getValue
+import com.example.mobiledev.ui.CityViewModel
+import com.example.mobiledev.ui.CityViewModelFactory
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobiledev.ui.CityUiState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.CircularProgressIndicator
 
-    val cities = citiesByCountry[country] ?: emptyList()
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CitySelectionScreen(
+    navController: NavController,
+    countryName: String?
+) {
+    if (countryName == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Country not specified.")
+        }
+        return
+    }
+
+    val cityViewModel: CityViewModel = viewModel(factory = CityViewModelFactory(countryName))
+    val uiState by cityViewModel.cityState.collectAsState()
 
     Scaffold(
-        topBar = { CitySelectionTopBar(country = country) }
+        topBar = { CitySelectionTopBar(countryName) }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5)),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
         ) {
-            items(cities) { city ->
-                CityItem(city = city, navController = navController)
+            when (val state = uiState) {
+                is CityUiState.Loading -> CircularProgressIndicator()
+                is CityUiState.Error -> Text("Error: Could not load cities.")
+                is CityUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = uiState is CityUiState.Loading,
+                        onRefresh = { cityViewModel.refresh() }
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFF5F5F5)),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(state.cities) { city ->
+                                CityItem(city = city, navController = navController)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun CitySelectionTopBar(country: String?) {
+fun CitySelectionTopBar(countryName: String?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -66,7 +97,7 @@ fun CitySelectionTopBar(country: String?) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Select a City in ${country ?: ""}",
+            text = "Select a City in ${countryName ?: "..."}",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
@@ -79,19 +110,17 @@ fun CityItem(city: String, navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { 
-                navController.navigate("main?city=$city") {
-                    // Go back to main screen, don't add to back stack
-                    popUpTo("main") { inclusive = true }
-                }
-             },
+            .clickable {
+                navController.navigate("main?city=$city")
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Text(
-            text = city,
-            modifier = Modifier.padding(16.dp),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = city,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

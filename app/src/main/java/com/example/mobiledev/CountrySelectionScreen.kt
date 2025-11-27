@@ -18,23 +18,54 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+import com.example.mobiledev.ui.GeoViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.mobiledev.ui.CountryUiState
+import androidx.compose.material3.CircularProgressIndicator
+
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CountrySelectionScreen(navController: NavController) {
+fun CountrySelectionScreen(
+    navController: NavController,
+    geoViewModel: GeoViewModel = viewModel()
+) {
+    val uiState by geoViewModel.countryState.collectAsState()
+
     Scaffold(
         topBar = { CountrySelectionTopBar() }
     ) { paddingValues ->
-        val countries = listOf("Italy", "France", "Spain", "USA", "Japan") // Dummy data
-
-        LazyColumn(
+        Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5)),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
         ) {
-            items(countries) { country ->
-                CountryItem(country = country, navController = navController)
+            when (val state = uiState) {
+                is CountryUiState.Loading -> CircularProgressIndicator()
+                is CountryUiState.Error -> Text("Error: Could not load countries.")
+                is CountryUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = uiState is CountryUiState.Loading,
+                        onRefresh = { geoViewModel.refresh() }
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFF5F5F5)),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(state.countries) { country ->
+                                CountryItem(country = country, navController = navController)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

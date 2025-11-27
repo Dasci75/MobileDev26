@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("citySelection/{country}") { backStackEntry ->
                             val country = backStackEntry.arguments?.getString("country")
-                            CitySelectionScreen(navController = navController, country = country)
+                            CitySelectionScreen(navController = navController, countryName = country)
                         }
                     }
                 }

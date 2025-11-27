@@ -20,48 +20,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
+import com.example.mobiledev.data.Trip
+import com.example.mobiledev.ui.TripViewModel
+import com.example.mobiledev.ui.TripUiState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 
-data class Trip(
-    val id: Int,
-    val title: String,
-    val location: String,
-    val rating: Float,
-    val latitude: Double,
-    val longitude: Double
-)
 
-// Dummy data for the list
-val dummyTrips = listOf(
-    Trip(1, "Eiffel tower", "Paris, France", 4.5f, 48.8584, 2.2945),
-    Trip(2, "Pisa tower", "Pisa, Italy", 4.0f, 43.7230, 10.3966)
-)
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 // MainScreen now accepts an optional city parameter to filter trips
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(navController: NavController, city: String? = null) {
-    // Filter the trips based on the selected city. If no city is provided, show all trips.
-    val tripsToShow = if (city != null) {
-        dummyTrips.filter { it.location.contains(city, ignoreCase = true) }
-    } else {
-        dummyTrips
-    }
+fun MainScreen(
+    navController: NavController,
+    city: String? = null,
+    tripViewModel: TripViewModel = viewModel()
+) {
+    val tripState by tripViewModel.tripState.collectAsState()
 
     Scaffold(
         topBar = { TopBar() },
@@ -83,20 +69,31 @@ fun MainScreen(navController: NavController, city: String? = null) {
                 .background(Color(0xFFF5F5F5)) // Light gray background
         ) {
             SearchBar(navController = navController)
-
-            if (city != null && tripsToShow.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                ) {
-                    OsmMapView(trips = tripsToShow)
+            when (val state = tripState) {
+                is TripUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is TripUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Error fetching trips")
+                    }
+                }
+                is TripUiState.Success -> {
+                    val tripsToShow = if (city != null) {
+                        state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
+                    } else {
+                        state.trips
+                    }
+                    PullToRefreshBox(
+                        isRefreshing = tripState is TripUiState.Loading,
+                        onRefresh = { tripViewModel.refresh() }
+                    ) {
+                        TripList(trips = tripsToShow, navController = navController)
+                    }
                 }
             }
-            TripList(trips = tripsToShow, navController = navController)
-
-
         }
     }
 }
@@ -157,7 +154,6 @@ fun SearchBar(navController: NavController) {
 @Composable
 fun TripList(trips: List<Trip>, navController: NavController) {
     LazyColumn(
-        modifier = Modifier.heightIn(max = 300.dp), // Set a max height
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -182,10 +178,10 @@ fun TripItem(trip: Trip, navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = trip.title, fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
-                Text(text = trip.location, fontSize = 14.sp, color = Color.DarkGray)
+                Text(text = trip.title ?: "", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
+                Text(text = trip.location ?: "", fontSize = 14.sp, color = Color.DarkGray)
                 Spacer(modifier = Modifier.height(8.dp))
-                RatingBar(rating = trip.rating)
+                RatingBar(rating = trip.rating ?: 0.0)
             }
             Spacer(modifier = Modifier.width(16.dp))
             // Placeholder for the image
@@ -203,7 +199,7 @@ fun TripItem(trip: Trip, navController: NavController) {
 }
 
 @Composable
-fun RatingBar(rating: Float) {
+fun RatingBar(rating: Double) {
     Row {
         for (i in 1..5) {
             Icon(
@@ -253,47 +249,6 @@ fun BottomNavigationBar(navController: NavController) {
         }
     }
 }
-
-@Composable
-fun OsmMapView(trips: List<Trip>) {
-    val context = LocalContext.current
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = {
-            // Initialize osmdroid configuration
-            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
-            MapView(it).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
-                setMultiTouchControls(true) // Enable zoom
-                controller.setZoom(12.0) // Default zoom level
-            }
-        },
-        update = { mapView ->
-            // Clear existing markers
-            mapView.overlays.clear()
-
-            // Add a marker for each trip
-            if (trips.isNotEmpty()) {
-                trips.forEach { trip ->
-                    val geoPoint = GeoPoint(trip.latitude, trip.longitude)
-                    val marker = Marker(mapView)
-                    marker.position = geoPoint
-                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    marker.title = trip.title
-                    mapView.overlays.add(marker)
-                }
-
-                // Center the map on the first trip in the list
-                val firstTripPoint = GeoPoint(trips[0].latitude, trips[0].longitude)
-                mapView.controller.setCenter(firstTripPoint)
-            }
-
-            // Redraw the map
-            mapView.invalidate()
-        }
-    )
-}
-
 
 @Preview(showBackground = true)
 @Composable

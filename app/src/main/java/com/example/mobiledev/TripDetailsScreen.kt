@@ -1,6 +1,5 @@
 package com.example.mobiledev
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,8 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -21,31 +18,46 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
+import com.example.mobiledev.data.Trip
+import com.example.mobiledev.ui.TripViewModel
+import com.example.mobiledev.ui.TripUiState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @Composable
-fun TripDetailsScreen(tripId: String?, navController: NavController) {
-    val trip = dummyTrips.find { it.id.toString() == tripId }
+fun TripDetailsScreen(
+    tripId: String?,
+    navController: NavController,
+    tripViewModel: TripViewModel = viewModel()
+) {
+    val tripState by tripViewModel.tripState.collectAsState()
 
-    if (trip == null) {
-        // Handle trip not found
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Trip not found")
-        }
-        return
-    }
-
-    Scaffold(
-        topBar = { DetailTopBar(trip = trip) },
-        bottomBar = { BottomNavigationBar(navController = navController) }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-                .verticalScroll(rememberScrollState())
-        ) {
-            TripDetailsContent(trip = trip)
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        when (val state = tripState) {
+            is TripUiState.Loading -> CircularProgressIndicator()
+            is TripUiState.Error -> Text("Error: Could not load trip details.")
+            is TripUiState.Success -> {
+                val trip = state.trips.find { it.id == tripId }
+                if (trip == null) {
+                    Text("Trip not found")
+                } else {
+                    Scaffold(
+                        topBar = { DetailTopBar(trip = trip) },
+                        bottomBar = { BottomNavigationBar(navController = navController) }
+                    ) { paddingValues ->
+                        Column(
+                            modifier = Modifier
+                                .padding(paddingValues)
+                                .fillMaxSize()
+                                .background(Color(0xFFF5F5F5))
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            TripDetailsContent(trip = trip)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -67,7 +79,7 @@ fun DetailTopBar(trip: Trip) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = trip.title,
+            text = trip.title ?: "",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
@@ -134,7 +146,7 @@ fun TripDetailsContent(trip: Trip) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(text = "Adres en info", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France", fontSize = 10.sp)
+                    Text(text = trip.location ?: "", fontSize = 10.sp)
                 }
             }
 
