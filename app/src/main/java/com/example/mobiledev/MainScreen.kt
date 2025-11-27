@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,22 +25,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.mobiledev.ui.theme.MobileDevTheme
 import com.example.mobiledev.data.Trip
-import com.example.mobiledev.ui.TripViewModel
 import com.example.mobiledev.ui.TripUiState
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.collectAsState
+import com.example.mobiledev.ui.TripViewModel
+import com.example.mobiledev.ui.theme.MobileDevTheme
 
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-// MainScreen now accepts an optional city parameter to filter trips
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -51,7 +46,7 @@ fun MainScreen(
 
     Scaffold(
         topBar = { TopBar() },
-        bottomBar = { BottomNavigationBar(navController = navController) },
+        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { /* TODO: Handle add trip */ },
@@ -86,12 +81,7 @@ fun MainScreen(
                     } else {
                         state.trips
                     }
-                    PullToRefreshBox(
-                        isRefreshing = tripState is TripUiState.Loading,
-                        onRefresh = { tripViewModel.refresh() }
-                    ) {
-                        TripList(trips = tripsToShow, navController = navController)
-                    }
+                    TripList(trips = tripsToShow, navController = navController)
                 }
             }
         }
@@ -137,7 +127,7 @@ fun SearchBar(navController: NavController) {
         OutlinedTextField(
             value = "",
             onValueChange = {},
-            placeholder = { Text("Search") },
+            placeholder = { Text("Search for a city") },
             trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -146,23 +136,28 @@ fun SearchBar(navController: NavController) {
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent
             ),
-            enabled = false // Disable the text field to make the whole card clickable
+            enabled = false
         )
     }
 }
 
 @Composable
 fun TripList(trips: List<Trip>, navController: NavController) {
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(trips) { trip ->
-            TripItem(trip = trip, navController = navController)
+    if (trips.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No trips found for this location.")
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(trips) { trip ->
+                TripItem(trip = trip, navController = navController)
+            }
         }
     }
 }
-
 
 @Composable
 fun TripItem(trip: Trip, navController: NavController) {
@@ -178,22 +173,19 @@ fun TripItem(trip: Trip, navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = trip.title ?: "", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
-                Text(text = trip.location ?: "", fontSize = 14.sp, color = Color.DarkGray)
+                Text(text = trip.name ?: "", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 18.sp)
+                Text(text = trip.description ?: "", fontSize = 14.sp, color = Color.DarkGray)
                 Spacer(modifier = Modifier.height(8.dp))
                 RatingBar(rating = trip.rating ?: 0.0)
             }
             Spacer(modifier = Modifier.width(16.dp))
-            // Placeholder for the image
             Box(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color.Gray.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
-            ) {
-                // In a real app, you would load an image here.
-            }
+            ) {}
         }
     }
 }
@@ -212,9 +204,8 @@ fun RatingBar(rating: Double) {
     }
 }
 
-// The BottomNavigationBar now handles navigation correctly
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, tripViewModel: TripViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -226,8 +217,8 @@ fun BottomNavigationBar(navController: NavController) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // "Home" button now navigates to the main screen and clears any filters
             TextButton(onClick = {
+                tripViewModel.refresh()
                 navController.navigate("main") {
                     popUpTo(navController.graph.findStartDestination().id) {
                         saveState = true
@@ -236,7 +227,6 @@ fun BottomNavigationBar(navController: NavController) {
                     restoreState = true
                 }
             }) {
-                // Highlight the button if on the main screen
                 val isMainScreen = currentRoute?.startsWith("main") == true
                 Text("Home", color = Color.White, fontWeight = if (isMainScreen) FontWeight.Bold else FontWeight.Normal)
             }
@@ -254,7 +244,6 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
-        // Pass city as null in the preview
         MainScreen(rememberNavController(), city = null)
     }
 }

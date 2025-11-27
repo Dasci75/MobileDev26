@@ -25,6 +25,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
 fun TripDetailsScreen(
     tripId: String?,
@@ -44,7 +46,7 @@ fun TripDetailsScreen(
                 } else {
                     Scaffold(
                         topBar = { DetailTopBar(trip = trip) },
-                        bottomBar = { BottomNavigationBar(navController = navController) }
+                        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) }
                     ) { paddingValues ->
                         Column(
                             modifier = Modifier
@@ -79,7 +81,7 @@ fun DetailTopBar(trip: Trip) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = trip.title ?: "",
+            text = trip.name ?: "",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
@@ -156,7 +158,7 @@ fun TripDetailsContent(trip: Trip) {
 
         // Description
         Text(
-            text = "De Eiffeltoren is een van de meest iconische bezienswaardigheden ter wereld. Hij torent hoog uit in het hart van Parijs en biedt adembenemende uitzichten over de stad vanaf elk niveau. Het voelde bijna onwerkelijk om hem te bezoeken – vooral wanneer hij 's avonds schitterde in het licht! De klim naar de top was een onvergetelijke ervaring, en het uitzicht over Parijs was gewoon geweldig.",
+            text = trip.description ?: "",
             fontSize = 16.sp
         )
 

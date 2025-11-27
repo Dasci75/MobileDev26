@@ -19,11 +19,18 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
+import com.example.mobiledev.ui.TripViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
-fun SettingsScreen(navController: NavController, auth: FirebaseAuth) {
+fun SettingsScreen(
+    navController: NavController,
+    auth: FirebaseAuth,
+    tripViewModel: TripViewModel = viewModel()
+) {
     Scaffold(
         topBar = { SettingsTopBar() },
-        bottomBar = { BottomNavigationBar(navController = navController) }
+        bottomBar = { BottomNavigationBar(navController = navController, tripViewModel = tripViewModel) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
