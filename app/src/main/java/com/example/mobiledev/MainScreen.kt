@@ -2,6 +2,7 @@ package com.example.mobiledev
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.ui.theme.MobileDevTheme
@@ -40,9 +43,17 @@ val dummyTrips = listOf(
     Trip(2, "Pisa tower", "Pisa, Italy", 4.0f)
 )
 
+// MainScreen now accepts an optional city parameter to filter trips
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navController: NavController, city: String? = null) {
+    // Filter the trips based on the selected city. If no city is provided, show all trips.
+    val tripsToShow = if (city != null) {
+        dummyTrips.filter { it.location.contains(city, ignoreCase = true) }
+    } else {
+        dummyTrips
+    }
+
     Scaffold(
         topBar = { TopBar() },
         bottomBar = { BottomNavigationBar(navController = navController) },
@@ -62,8 +73,9 @@ fun MainScreen(navController: NavController) {
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5)) // Light gray background
         ) {
-            SearchBar()
-            TripList(trips = dummyTrips, navController = navController)
+            SearchBar(navController = navController)
+            // Display the filtered list of trips
+            TripList(trips = tripsToShow, navController = navController)
         }
     }
 }
@@ -95,11 +107,12 @@ fun TopBar() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBar() {
+fun SearchBar(navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(16.dp)
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { navController.navigate("countrySelection") },
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -114,7 +127,8 @@ fun SearchBar() {
                 unfocusedContainerColor = Color.White,
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent
-            )
+            ),
+            enabled = false // Disable the text field to make the whole card clickable
         )
     }
 }
@@ -179,6 +193,7 @@ fun RatingBar(rating: Float) {
     }
 }
 
+// The BottomNavigationBar now handles navigation correctly
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -192,8 +207,19 @@ fun BottomNavigationBar(navController: NavController) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = { navController.navigate("main") }) {
-                Text("Home", color = Color.White, fontWeight = if (currentRoute == "main") FontWeight.Bold else FontWeight.Normal)
+            // "Home" button now navigates to the main screen and clears any filters
+            TextButton(onClick = {
+                navController.navigate("main") {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }) {
+                // Highlight the button if on the main screen
+                val isMainScreen = currentRoute?.startsWith("main") == true
+                Text("Home", color = Color.White, fontWeight = if (isMainScreen) FontWeight.Bold else FontWeight.Normal)
             }
             TextButton(onClick = { /* TODO: Implement Dashboard */ }) {
                 Text("Dashboard", color = Color.White, fontWeight = if (currentRoute == "dashboard") FontWeight.Bold else FontWeight.Normal)
@@ -209,6 +235,7 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
-        MainScreen(rememberNavController())
+        // Pass city as null in the preview
+        MainScreen(rememberNavController(), city = null)
     }
 }

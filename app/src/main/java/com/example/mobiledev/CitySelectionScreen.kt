@@ -1,49 +1,97 @@
 package com.example.mobiledev
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 @Composable
 fun CitySelectionScreen(navController: NavController, country: String?) {
-    val cities = getCitiesForCountry(country) // Replace with your actual data retrieval logic
+    // Dummy data - in a real app, this would come from a database or API
+    val citiesByCountry = mapOf(
+        "Italy" to listOf("Rome", "Florence", "Venice"),
+        "France" to listOf("Paris", "Nice", "Lyon"),
+        "Spain" to listOf("Madrid", "Barcelona", "Seville"),
+        "USA" to listOf("New York", "Los Angeles", "Chicago"),
+        "Japan" to listOf("Tokyo", "Kyoto", "Osaka")
+    )
 
-    Column {
-        Text(
-            text = "Select a City in $country",
-            modifier = Modifier.padding(16.dp)
-        )
-        LazyColumn {
+    val cities = citiesByCountry[country] ?: emptyList()
+
+    Scaffold(
+        topBar = { CitySelectionTopBar(country = country) }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5)),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             items(cities) { city ->
-                Text(
-                    text = city,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            navController.navigate("main/$city")
-                        }
-                        .padding(16.dp)
-                )
+                CityItem(city = city, navController = navController)
             }
         }
     }
 }
 
-fun getCitiesForCountry(country: String?): List<String> {
-    return when (country) {
-        "USA" -> listOf("New York", "Los Angeles", "Chicago")
-        "Canada" -> listOf("Toronto", "Vancouver", "Montreal")
-        "Mexico" -> listOf("Mexico City", "Cancun", "Guadalajara")
-        "Brazil" -> listOf("Rio de Janeiro", "São Paulo", "Salvador")
-        "Argentina" -> listOf("Buenos Aires", "Córdoba", "Rosario")
-        else -> emptyList()
+@Composable
+fun CitySelectionTopBar(country: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF9A825)) // Orange
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "CityTrip",
+            color = Color.White,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Select a City in ${country ?: ""}",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun CityItem(city: String, navController: NavController) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { 
+                navController.navigate("main?city=$city") {
+                    // Go back to main screen, don't add to back stack
+                    popUpTo("main") { inclusive = true }
+                }
+             },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Text(
+            text = city,
+            modifier = Modifier.padding(16.dp),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

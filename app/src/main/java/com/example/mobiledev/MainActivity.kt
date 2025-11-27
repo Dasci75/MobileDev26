@@ -14,6 +14,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.example.mobiledev.ui.theme.MobileDevTheme
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 class MainActivity : ComponentActivity() {
     private val auth: FirebaseAuth by lazy { Firebase.auth }
@@ -38,8 +40,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             })
                         }
-                        composable("main") {
-                            MainScreen(navController = navController)
+                        composable(
+                            "main?city={city}",
+                            arguments = listOf(navArgument("city") { nullable = true })
+                        ) { backStackEntry ->
+                            val city = backStackEntry.arguments?.getString("city")
+                            MainScreen(navController = navController, city = city)
                         }
                         composable("tripDetails/{tripId}") { backStackEntry ->
                             val tripId = backStackEntry.arguments?.getString("tripId")
@@ -47,6 +53,13 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(navController = navController, auth = auth)
+                        }
+                        composable("countrySelection") {
+                            CountrySelectionScreen(navController = navController)
+                        }
+                        composable("citySelection/{country}") { backStackEntry ->
+                            val country = backStackEntry.arguments?.getString("country")
+                            CitySelectionScreen(navController = navController, country = country)
                         }
                     }
                 }
