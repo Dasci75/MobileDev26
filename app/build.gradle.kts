@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation(libs.generativeai)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -65,4 +66,5 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0") // Coil for image loading
     implementation("io.coil-kt:coil-base:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.8") // For Icons.Filled.Chat
 }
