@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,8 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.TripUiState
@@ -41,9 +40,13 @@ import com.example.mobiledev.ui.theme.MobileDevTheme
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.layout.ContentScale // Ensure ContentScale is imported
-import com.example.mobiledev.ui.RatingBar // Import the common RatingBar
-import com.example.mobiledev.ui.Screen
+import androidx.compose.ui.viewinterop.AndroidView
+import com.example.mobiledev.ui.RatingBar
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 private const val TAG = "MainScreen"
 
@@ -57,7 +60,6 @@ fun MainScreen(
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
 
-    // Use LaunchedEffect to trigger data refresh when MainScreen is active
     val currentOnGetTrips by rememberUpdatedState(tripViewModel::getTrips)
     LaunchedEffect(key1 = Unit) {
         Log.d(TAG, "MainScreen LaunchedEffect: Calling getTrips()")
@@ -91,7 +93,27 @@ fun MainScreen(
                 } else {
                     state.trips
                 }
-                TripList(trips = tripsToShow, navController = navController)
+
+                // Use a Column to display the list and then the map
+                Column(modifier = Modifier.fillMaxSize()) {
+                    TripList(
+                        modifier = if (city != null && tripsToShow.isNotEmpty()) Modifier.height(300.dp) else Modifier.fillMaxHeight(),
+                        trips = tripsToShow, 
+                        navController = navController
+                    )
+
+                    if (city != null && tripsToShow.isNotEmpty()) {
+                        // The map takes the remaining space
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(16.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        ) {
+                            OsmMapView(trips = tripsToShow)
+                        }
+                    }
+                }
             }
         }
     }
@@ -151,13 +173,14 @@ fun SearchBar(navController: NavController) {
 }
 
 @Composable
-fun TripList(trips: List<Trip>, navController: NavController) {
+fun TripList(modifier: Modifier = Modifier, trips: List<Trip>, navController: NavController) {
     if (trips.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No trips found for this location.")
         }
     } else {
         LazyColumn(
+            modifier = modifier,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -188,10 +211,10 @@ fun TripItem(trip: Trip, navController: NavController) {
                 contentDescription = "${trip.name} main image",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp) // Make image taller
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) // Rounded top corners
-                    .background(Color.Gray.copy(alpha = 0.5f)), // Placeholder background
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop // Crop to fill bounds
+                    .height(180.dp) 
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
+                    .background(Color.Gray.copy(alpha = 0.5f)), 
+                contentScale = ContentScale.Crop // Use imported ContentScale
             )
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -217,10 +240,51 @@ fun TripItem(trip: Trip, navController: NavController) {
     }
 }
 
+@Composable
+fun OsmMapView(trips: List<Trip>) {
+    val context = LocalContext.current
+    AndroidView(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp)),
+        factory = {
+            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
+            MapView(it).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+            }
+        },
+        update = { mapView ->
+            mapView.overlays.clear()
+            if (trips.isNotEmpty()) {
+                val validTrips = trips.filter { it.latitude != null && it.longitude != null }
+                if (validTrips.isNotEmpty()) {
+                    validTrips.forEach { trip ->
+                        val geoPoint = GeoPoint(trip.latitude!!, trip.longitude!!)
+                        val marker = Marker(mapView)
+                        marker.position = geoPoint
+                        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        marker.title = trip.name
+                        mapView.overlays.add(marker)
+                    }
+                    val firstTripPoint = GeoPoint(validTrips[0].latitude!!, validTrips[0].longitude!!)
+                    mapView.controller.setZoom(12.0)
+                    mapView.controller.setCenter(firstTripPoint)
+                }
+            }
+            mapView.invalidate()
+        }
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
-        MainScreen(rememberNavController(), city = null, paddingValues = PaddingValues(0.dp))
+        MainScreen(
+            navController = rememberNavController(), 
+            city = null, 
+            paddingValues = PaddingValues(0.dp)
+        )
     }
 }

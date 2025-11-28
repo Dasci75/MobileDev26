@@ -174,7 +174,7 @@ fun TripDetailsContent(trip: Trip) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(text = "Locatie: Lat ${trip.latitude ?: "N/A"}, Lon ${trip.longitude ?: "N/A"}", fontSize = 14.sp)
+                    Text(text = "Locatie: ${trip.cityId ?: "N/A"}, ${trip.country ?: "N/A"}", fontSize = 14.sp)
                     Text(text = "Categorie: ${trip.category ?: ""}", fontSize = 14.sp)
                     trip.createdAt?.let {
                         Text(text = "Toegevoegd: ${dateFormat.format(it.toDate())}", fontSize = 14.sp)
