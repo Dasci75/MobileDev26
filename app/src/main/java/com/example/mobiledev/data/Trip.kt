@@ -13,5 +13,7 @@ data class Trip(
     val category: String? = null,
     val createdAt: Timestamp? = null,
     val description: String? = null,
-    val photoUrl: Map<String, String>? = null // Nested map for photo URLs
+    val photoUrl: Map<String, String>? = null, // Nested map for photo URLs
+    val userId: String? = null,
+    val reviews: List<Review> = emptyList()
 )

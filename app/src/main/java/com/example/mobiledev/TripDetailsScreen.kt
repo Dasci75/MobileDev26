@@ -8,13 +8,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,30 +23,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.mobiledev.data.Review
 import com.example.mobiledev.data.Trip
+import com.example.mobiledev.ui.RatingBar
 import com.example.mobiledev.ui.TripUiState
 import com.example.mobiledev.ui.TripViewModel
-import com.example.mobiledev.ui.theme.MobileDevTheme
-import com.example.mobiledev.ui.RatingBar // Import the common RatingBar
-import androidx.compose.material.icons.filled.Star // Import Star icon
-import com.google.ai.client.generativeai.Chat
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-
-
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +69,7 @@ fun TripDetailsScreen(
                             .background(Color(0xFFF5F5F5))
                             .verticalScroll(rememberScrollState())
                     ) {
-                        TripDetailsContent(trip = trip)
+                        TripDetailsContent(trip = trip, tripViewModel = tripViewModel)
                     }
                     FloatingActionButton(
                         onClick = { /* TODO: Implement join chat functionality */ },
@@ -96,7 +88,7 @@ fun TripDetailsScreen(
 }
 
 @Composable
-fun TripDetailsContent(trip: Trip) {
+fun TripDetailsContent(trip: Trip, tripViewModel: TripViewModel) {
     val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault())
     val context = LocalContext.current
 
@@ -207,20 +199,99 @@ fun TripDetailsContent(trip: Trip) {
             RatingBar(rating = trip.rating ?: 0.0)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Review Button
-            Button(
-                onClick = { /* TODO: Handle Review action */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9A825))
-            ) {
-                Text(text = "Review", color = Color.White, fontSize = 18.sp)
-            }
+            // Reviews Section
+            ReviewsSection(trip = trip, tripViewModel = tripViewModel)
+
             Spacer(modifier = Modifier.height(16.dp)) // Extra space for FAB
         }
     }
 }
 
+@Composable
+fun ReviewsSection(trip: Trip, tripViewModel: TripViewModel) {
+    Column {
+        Text(
+            text = "Reviews",
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
+        // List of reviews
+        trip.reviews.forEach { review ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    RatingBar(rating = review.rating)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "- ${review.userId}", // replace with user name later
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Add a review
+        AddReview(tripId = trip.id, tripViewModel = tripViewModel)
+    }
+}
+
+@Composable
+fun AddReview(tripId: String, tripViewModel: TripViewModel) {
+    var rating by remember { mutableStateOf(0.0) }
+    var comment by remember { mutableStateOf("") }
+    val auth = Firebase.auth
+
+    Column {
+        Text(
+            text = "Laat een review achter",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RatingBar(rating = rating, onRatingChanged = { rating = it })
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = comment,
+            onValueChange = { comment = it },
+            label = { Text("Opmerking") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                val userId = auth.currentUser?.uid
+                if (userId != null) {
+                    val review = Review(
+                        userId = userId,
+                        rating = rating,
+                        comment = comment,
+                        createdAt = com.google.firebase.Timestamp.now()
+                    )
+                    tripViewModel.addReview(tripId, review)
+                    // Optionally clear fields after submitting
+                    rating = 0.0
+                    comment = ""
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = auth.currentUser != null
+        ) {
+            Text("Verstuur")
+        }
+    }
+}

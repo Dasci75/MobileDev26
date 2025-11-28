@@ -36,6 +36,10 @@ import androidx.compose.runtime.getValue
 import com.example.mobiledev.ui.Screen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,14 +56,27 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val startDestination = if (auth.currentUser != null) "main" else "login"
+
+                    var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
+
+                    DisposableEffect(auth) {
+                        val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                            isLoggedIn = firebaseAuth.currentUser != null
+                        }
+                        auth.addAuthStateListener(authStateListener)
+                        onDispose {
+                            auth.removeAuthStateListener(authStateListener)
+                        }
+                    }
+
+                    val startDestination = if (isLoggedIn) "main" else "login"
 
                     Scaffold(
                         topBar = {
                             TopAppBar(title = { Text("CityTrip") })
                         },
                         bottomBar = {
-                            if (auth.currentUser != null) { // Only show bottom bar if logged in
+                            if (isLoggedIn) { // Only show bottom bar if logged in
                                 BottomNavigationBar(navController = navController)
                             }
                         }
@@ -148,4 +165,3 @@ fun BottomNavigationBar(navController: NavController) {
         }
     }
 }
-
