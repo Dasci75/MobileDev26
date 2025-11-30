@@ -31,6 +31,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.mobiledev.data.Review
 import com.example.mobiledev.data.Trip
+import com.example.mobiledev.ui.ChatViewModel
 import com.example.mobiledev.ui.RatingBar
 import com.example.mobiledev.ui.TripUiState
 import com.example.mobiledev.ui.TripViewModel
@@ -45,9 +46,12 @@ fun TripDetailsScreen(
     tripId: String?,
     navController: NavController,
     tripViewModel: TripViewModel = viewModel(),
-    paddingValues: PaddingValues // Added paddingValues parameter
+    chatViewModel: ChatViewModel = viewModel(),
+    paddingValues: PaddingValues
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
+    val auth = Firebase.auth
+    val currentUserId = auth.currentUser?.uid
 
     Box(
         modifier = Modifier
@@ -71,15 +75,23 @@ fun TripDetailsScreen(
                     ) {
                         TripDetailsContent(trip = trip, tripViewModel = tripViewModel)
                     }
-                    FloatingActionButton(
-                        onClick = { /* TODO: Implement join chat functionality */ },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd) // Align to bottom end of the Box
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Chat, "Join Chat", tint = Color.White)
+
+                    // Only show the FAB if the current user is logged in and is NOT the trip owner
+                    if (currentUserId != null && trip.userId != null && currentUserId != trip.userId) {
+                        FloatingActionButton(
+                            onClick = {
+                                chatViewModel.findOrCreateChat(trip.userId, trip.id) { chatId ->
+                                    navController.navigate("chat/$chatId")
+                                }
+                            },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd) // Align to bottom end of the Box
+                                .padding(16.dp)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Chat, "Join Chat", tint = Color.White)
+                        }
                     }
                 }
             }

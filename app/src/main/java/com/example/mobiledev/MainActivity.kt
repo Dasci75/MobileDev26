@@ -16,7 +16,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.example.mobiledev.ChatScreen
 import com.example.mobiledev.DashboardScreen
 
 import androidx.compose.material3.Scaffold
@@ -110,8 +109,12 @@ class MainActivity : ComponentActivity() {
                                 val country = backStackEntry.arguments?.getString("country")
                                 CitySelectionScreen(navController = navController, countryName = country, paddingValues = paddingValues)
                             }
-                            composable("chat") {
-                                ChatScreen(paddingValues = paddingValues)
+                            composable("chat") { 
+                                ChatListScreen(navController = navController, paddingValues = paddingValues)
+                            }
+                            composable("chat/{chatId}") { backStackEntry ->
+                                val chatId = backStackEntry.arguments?.getString("chatId")
+                                ChatScreen(chatId = chatId, paddingValues = paddingValues)
                             }
                             composable("dashboard") {
                                 DashboardScreen(paddingValues = paddingValues)
