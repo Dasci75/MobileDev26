@@ -9,6 +9,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +36,7 @@ import androidx.compose.foundation.layout.padding
 @Composable
 fun CountrySelectionScreen(
     navController: NavController,
-    geoViewModel: GeoViewModel = viewModel(),
+    geoViewModel: GeoViewModel,
     paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     val uiState by geoViewModel.countryState.collectAsState()
@@ -61,6 +62,11 @@ fun CountrySelectionScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        item {
+                            Button(onClick = { navController.navigate("addCountry") }) {
+                                Text("Add Country")
+                            }
+                        }
                         items(state.countries) { country ->
                             CountryItem(country = country, navController = navController)
                         }
@@ -76,11 +82,13 @@ fun CountryItem(country: String, navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { navController.navigate("citySelection/$country") },
+            .clickable {
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
+                navController.popBackStack()
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Text(
-            text = country,
+                Text(text = country.replaceFirstChar { it.uppercaseChar() },
             modifier = Modifier.padding(16.dp),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold

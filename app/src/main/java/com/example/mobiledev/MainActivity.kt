@@ -4,42 +4,35 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.google.firebase.auth.FirebaseAuth
-import com.example.mobiledev.ui.theme.MobileDevTheme
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.example.mobiledev.DashboardScreen
-
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.mobiledev.ui.Screen
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-
+import com.example.mobiledev.ui.theme.MobileDevTheme
+import com.google.firebase.auth.FirebaseAuth
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import com.example.mobiledev.AddTripScreen
+import com.example.mobiledev.ui.GeoViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.navigation
+import com.example.mobiledev.ui.CityViewModel
+import com.example.mobiledev.ui.CityViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -50,17 +43,33 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MobileDevTheme {
+                val permissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                    onResult = { isGranted: Boolean ->
+                        if (isGranted) {
+                            // Permission granted
+                        } else {
+                            // Permission denied
+                        }
+                    }
+                )
+
+                LaunchedEffect(Unit) {
+                    permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    val geoViewModel: GeoViewModel = viewModel()
 
                     var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
 
                     DisposableEffect(auth) {
-                        val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-                            isLoggedIn = firebaseAuth.currentUser != null
+                        val authStateListener = FirebaseAuth.AuthStateListener {
+                            isLoggedIn = it.currentUser != null
                         }
                         auth.addAuthStateListener(authStateListener)
                         onDispose {
@@ -69,6 +78,8 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val startDestination = if (isLoggedIn) "main" else "login"
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
 
                     Scaffold(
                         topBar = {
@@ -103,11 +114,43 @@ class MainActivity : ComponentActivity() {
                                 SettingsScreen(navController = navController, auth = auth, paddingValues = paddingValues)
                             }
                             composable("countrySelection") {
-                                CountrySelectionScreen(navController = navController, paddingValues = paddingValues)
+                                CountrySelectionScreen(navController = navController, geoViewModel = geoViewModel, paddingValues = paddingValues)
                             }
-                            composable("citySelection/{country}") { backStackEntry ->
-                                val country = backStackEntry.arguments?.getString("country")
-                                CitySelectionScreen(navController = navController, countryName = country, paddingValues = paddingValues)
+                            navigation(
+                                startDestination = "cityList",
+                                route = "citySelection/{country}"
+                            ) {
+                                composable("cityList") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("citySelection/{country}")
+                                    }
+                                    val country = parentEntry.arguments?.getString("country")
+                                    val cityViewModel: CityViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = CityViewModelFactory(country!!)
+                                    )
+                                    CitySelectionScreen(
+                                        navController = navController,
+                                        countryName = country,
+                                        cityViewModel = cityViewModel,
+                                        paddingValues = paddingValues
+                                    )
+                                }
+                                composable("addCity") { backStackEntry ->
+                                     val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("citySelection/{country}")
+                                    }
+                                    val country = parentEntry.arguments?.getString("country")
+                                    val cityViewModel: CityViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = CityViewModelFactory(country!!)
+                                    )
+                                    AddCityScreen(
+                                        navController = navController,
+                                        countryName = country,
+                                        cityViewModel = cityViewModel
+                                    )
+                                }
                             }
                             composable("chat") { 
                                 ChatListScreen(navController = navController, paddingValues = paddingValues)
@@ -118,6 +161,12 @@ class MainActivity : ComponentActivity() {
                             }
                             composable("dashboard") {
                                 DashboardScreen(paddingValues = paddingValues)
+                            }
+                            composable("addTrip") {
+                                AddTripScreen(navController = navController, paddingValues = paddingValues)
+                            }
+                            composable("addCountry") {
+                                AddCountryScreen(navController = navController, geoViewModel = geoViewModel)
                             }
                         }
                     }

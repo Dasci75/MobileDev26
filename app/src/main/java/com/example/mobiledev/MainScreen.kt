@@ -1,5 +1,8 @@
 package com.example.mobiledev
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,41 +10,36 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.mobiledev.data.Trip
+import com.example.mobiledev.ui.RatingBar
 import com.example.mobiledev.ui.TripUiState
 import com.example.mobiledev.ui.TripViewModel
 import com.example.mobiledev.ui.theme.MobileDevTheme
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import com.example.mobiledev.ui.RatingBar
+import com.google.android.gms.location.LocationServices
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -59,6 +57,19 @@ fun MainScreen(
     paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
+    val context = LocalContext.current
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    var userLocation by remember { mutableStateOf<GeoPoint?>(null) }
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
+                if (location != null) {
+                    userLocation = GeoPoint(location.latitude, location.longitude)
+                }
+            }
+        }
+    }
 
     val currentOnGetTrips by rememberUpdatedState(tripViewModel::getTrips)
     LaunchedEffect(key1 = Unit) {
@@ -66,81 +77,74 @@ fun MainScreen(
         currentOnGetTrips()
     }
 
-    Column(
-        modifier = Modifier
-            .padding(paddingValues) // Apply padding from parent Scaffold
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Light gray background
-    ) {
-        SearchBar(navController = navController)
-        when (val state = tripState) {
-            is TripUiState.Loading -> {
-                Log.d(TAG, "TripUiState: Loading")
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5)) // Light gray background
+        ) {
+            SearchBar(navController = navController)
+            when (val state = tripState) {
+                is TripUiState.Loading -> {
+                    Log.d(TAG, "TripUiState: Loading")
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
-            is TripUiState.Error -> {
-                Log.d(TAG, "TripUiState: Error")
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Error fetching trips")
+                is TripUiState.Error -> {
+                    Log.d(TAG, "TripUiState: Error")
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Error fetching trips")
+                    }
                 }
-            }
-            is TripUiState.Success -> {
-                Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
-                val tripsToShow = if (city != null) {
-                    state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
-                } else {
-                    state.trips
-                }
+                is TripUiState.Success -> {
+                    Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
+                    val tripsToShow = if (city != null) {
+                        state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
+                    } else {
+                        state.trips
+                    }
 
-                // Use a Column to display the list and then the map
-                Column(modifier = Modifier.fillMaxSize()) {
-                    TripList(
-                        modifier = if (city != null && tripsToShow.isNotEmpty()) Modifier.height(300.dp) else Modifier.fillMaxHeight(),
-                        trips = tripsToShow, 
-                        navController = navController
-                    )
+                    // Use a Column to display the list and then the map
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        TripList(
+                            modifier = if (city != null && tripsToShow.isNotEmpty()) Modifier.height(300.dp) else Modifier.fillMaxHeight(),
+                            trips = tripsToShow,
+                            navController = navController
+                        )
 
-                    if (city != null && tripsToShow.isNotEmpty()) {
-                        // The map takes the remaining space
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                        ) {
-                            OsmMapView(trips = tripsToShow)
+                        if (city != null && tripsToShow.isNotEmpty()) {
+                            // The map takes the remaining space
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            ) {
+                                OsmMapView(trips = tripsToShow, userLocation = userLocation)
+                            }
+                        } else if (city == null) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            ) {
+                                OsmMapView(trips = emptyList(), userLocation = userLocation)
+                            }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun TopBar() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF9A825)) // Orange
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "CityTrip",
-            color = Color.White,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Home",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        FloatingActionButton(
+            onClick = { navController.navigate("addTrip") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add Trip")
+        }
     }
 }
 
@@ -211,9 +215,9 @@ fun TripItem(trip: Trip, navController: NavController) {
                 contentDescription = "${trip.name} main image",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp) 
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
-                    .background(Color.Gray.copy(alpha = 0.5f)), 
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(Color.Gray.copy(alpha = 0.5f)),
                 contentScale = ContentScale.Crop // Use imported ContentScale
             )
             Column(
@@ -241,7 +245,7 @@ fun TripItem(trip: Trip, navController: NavController) {
 }
 
 @Composable
-fun OsmMapView(trips: List<Trip>) {
+fun OsmMapView(trips: List<Trip>, userLocation: GeoPoint?) {
     val context = LocalContext.current
     AndroidView(
         modifier = Modifier
@@ -268,9 +272,17 @@ fun OsmMapView(trips: List<Trip>) {
                         mapView.overlays.add(marker)
                     }
                     val firstTripPoint = GeoPoint(validTrips[0].latitude!!, validTrips[0].longitude!!)
-                    mapView.controller.setZoom(12.0)
+                    mapView.controller.setZoom(15.0)
                     mapView.controller.setCenter(firstTripPoint)
                 }
+            } else if (userLocation != null) {
+                mapView.controller.setZoom(15.0)
+                mapView.controller.setCenter(userLocation)
+                val marker = Marker(mapView)
+                marker.position = userLocation
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                marker.title = "My Location"
+                mapView.overlays.add(marker)
             }
             mapView.invalidate()
         }
@@ -282,8 +294,8 @@ fun OsmMapView(trips: List<Trip>) {
 fun MainScreenPreview() {
     MobileDevTheme {
         MainScreen(
-            navController = rememberNavController(), 
-            city = null, 
+            navController = rememberNavController(),
+            city = null,
             paddingValues = PaddingValues(0.dp)
         )
     }

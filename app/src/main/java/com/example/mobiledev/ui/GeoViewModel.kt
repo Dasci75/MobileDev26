@@ -11,12 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.Normalizer
 
-sealed interface CountryUiState {
-    data class Success(val countries: List<String>) : CountryUiState
-    object Error : CountryUiState
-    object Loading : CountryUiState
-}
 
 class GeoViewModel : ViewModel() {
 
@@ -27,17 +23,50 @@ class GeoViewModel : ViewModel() {
         getCountries()
     }
 
+    private fun normalizeString(input: String): String {
+        val normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+        return normalized.replace("\\p{InCombiningDiacriticalMarks}".toRegex(), "").lowercase()
+    }
+
     fun getCountries() {
         viewModelScope.launch {
             _countryState.value = CountryUiState.Loading
             try {
                 val db = Firebase.firestore
-                val result = db.collection("trips").get().await()
-                val countries = result.toObjects(Trip::class.java).mapNotNull { it.country }.distinct()
-                _countryState.value = CountryUiState.Success(countries)
+                val tripsResult = db.collection("trips").get().await()
+                val countriesFromTrips = tripsResult.toObjects(Trip::class.java).mapNotNull { it.country }.distinct()
+
+                val countriesResult = db.collection("countries").get().await()
+                val countriesFromCountries = countriesResult.map { it.id }.distinct()
+
+                val allCountries = (countriesFromTrips + countriesFromCountries).distinct().sorted()
+                _countryState.value = CountryUiState.Success(allCountries)
             } catch (e: Exception) {
                 Log.e("GeoViewModel", "Error fetching countries", e)
                 _countryState.value = CountryUiState.Error
+            }
+        }
+    }
+
+    fun addCountry(countryName: String) {
+        viewModelScope.launch {
+            try {
+                val db = Firebase.firestore
+                val capitalizedCountryName = countryName.split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+                val normalizedCountryName = normalizeString(capitalizedCountryName)
+
+                val countriesQuery = db.collection("countries").get().await()
+                val existingCountries = countriesQuery.map { normalizeString(it.id) }
+                if (existingCountries.contains(normalizedCountryName)) {
+                    return@launch
+                }
+
+
+                
+                db.collection("countries").document(capitalizedCountryName).set(mapOf("name" to capitalizedCountryName)).await()
+                getCountries() // Refresh the list
+            } catch (e: Exception) {
+                Log.e("GeoViewModel", "Error adding country", e)
             }
         }
     }

@@ -43,6 +43,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -63,8 +64,11 @@ dependencies {
 
     implementation(libs.firebase.auth.ktx)       // Firebase Auth
     implementation(libs.firebase.firestore.ktx)  // Firebase Firestore
+    implementation(libs.firebase.storage.ktx)    // Firebase Storage
+    implementation(libs.play.services.location)  // Google Location Services
     implementation("io.coil-kt:coil-compose:2.6.0") // Coil for image loading
     implementation("io.coil-kt:coil-base:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.8") // For Icons.Filled.Chat
+
 }

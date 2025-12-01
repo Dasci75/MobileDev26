@@ -9,7 +9,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +39,7 @@ import androidx.compose.foundation.layout.padding
 fun CitySelectionScreen(
     navController: NavController,
     countryName: String?,
+    cityViewModel: CityViewModel,
     paddingValues: PaddingValues // Added paddingValues parameter
 ) {
     if (countryName == null) {
@@ -51,7 +54,6 @@ fun CitySelectionScreen(
         return
     }
 
-    val cityViewModel: CityViewModel = viewModel(factory = CityViewModelFactory(countryName))
     val uiState by cityViewModel.cityState.collectAsState()
 
     Box(
@@ -75,6 +77,11 @@ fun CitySelectionScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        item {
+                            Button(onClick = { navController.navigate("addCity") }) {
+                                Text("Add City")
+                            }
+                        }
                         items(state.cities) { city ->
                             CityItem(city = city, navController = navController)
                         }
@@ -91,13 +98,13 @@ fun CityItem(city: String, navController: NavController) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.navigate("main?city=$city")
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCity", city)
+                navController.popBackStack()
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = city,
+                    Text(text = city.replaceFirstChar { it.uppercaseChar() },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
