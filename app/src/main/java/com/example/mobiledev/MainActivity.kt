@@ -28,6 +28,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.example.mobiledev.AddTripScreen
 import com.example.mobiledev.ui.GeoViewModel
+import com.example.mobiledev.ui.TripViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.navigation
@@ -136,19 +137,16 @@ class MainActivity : ComponentActivity() {
                                         paddingValues = paddingValues
                                     )
                                 }
-                                composable("addCity") { backStackEntry ->
+                                composable("addCity/{from}") { backStackEntry ->
                                      val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("citySelection/{country}")
                                     }
                                     val country = parentEntry.arguments?.getString("country")
-                                    val cityViewModel: CityViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = CityViewModelFactory(country!!)
-                                    )
+                                    val from = backStackEntry.arguments?.getString("from")
                                     AddCityScreen(
                                         navController = navController,
                                         countryName = country,
-                                        cityViewModel = cityViewModel
+                                        from = from
                                     )
                                 }
                             }
@@ -163,11 +161,53 @@ class MainActivity : ComponentActivity() {
                                 DashboardScreen(paddingValues = paddingValues)
                             }
                             composable("addTrip") {
-                                AddTripScreen(navController = navController, paddingValues = paddingValues)
+                                val tripViewModel: TripViewModel = viewModel()
+                                AddTripScreen(navController = navController, paddingValues = paddingValues, geoViewModel = geoViewModel, tripViewModel = tripViewModel)
                             }
-                            composable("addCountry") {
-                                AddCountryScreen(navController = navController, geoViewModel = geoViewModel)
+                            composable("addCountry/{from}") { backStackEntry ->
+                                val from = backStackEntry.arguments?.getString("from")
+                                AddCountryScreen(navController = navController, from = from)
                             }
+                            navigation(
+                                startDestination = "addTripCountryList",
+                                route = "addTripCountrySelection"
+                            ) {
+                                composable("addTripCountryList") {
+                                    AddTripCountrySelectionScreen(navController = navController, geoViewModel = geoViewModel, paddingValues = paddingValues)
+                                }
+                            }
+                            navigation(
+                                startDestination = "addTripCityList",
+                                route = "addTripCitySelection/{country}"
+                            ) {
+                                composable("addTripCityList") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addTripCitySelection/{country}")
+                                    }
+                                    val country = parentEntry.arguments?.getString("country")
+                                    val cityViewModel: CityViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = CityViewModelFactory(country!!)
+                                    )
+                                    AddTripCitySelectionScreen(
+                                        navController = navController,
+                                        countryName = country,
+                                        cityViewModel = cityViewModel,
+                                        paddingValues = paddingValues
+                                    )
+                                }
+                                                                composable("addCity/{from}") { backStackEntry ->
+                                                                    val parentEntry = remember(backStackEntry) {
+                                                                        navController.getBackStackEntry("addTripCitySelection/{country}")
+                                                                    }
+                                                                    val country = parentEntry.arguments?.getString("country")
+                                                                    val from = backStackEntry.arguments?.getString("from")
+                                                                    AddCityScreen(
+                                                                        navController = navController,
+                                                                        countryName = country,
+                                                                        from = from
+                                                                    )
+                                                                }                            }
                         }
                     }
                 }

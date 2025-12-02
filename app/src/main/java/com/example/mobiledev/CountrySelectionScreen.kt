@@ -63,7 +63,7 @@ fun CountrySelectionScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         item {
-                            Button(onClick = { navController.navigate("addCountry") }) {
+                            Button(onClick = { navController.navigate("addCountry/countrySelection") }) {
                                 Text("Add Country")
                             }
                         }
@@ -83,8 +83,7 @@ fun CountryItem(country: String, navController: NavController) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
-                navController.popBackStack()
+                navController.navigate("citySelection/$country")
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {

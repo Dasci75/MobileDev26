@@ -33,6 +33,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.mobiledev.ui.AddTripViewModel
+import com.example.mobiledev.ui.GeoViewModel
+import com.example.mobiledev.ui.TripViewModel
 import com.google.android.gms.location.LocationServices
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -47,7 +49,9 @@ import org.osmdroid.views.overlay.Marker
 fun AddTripScreen(
     navController: NavController,
     paddingValues: PaddingValues,
-    addTripViewModel: AddTripViewModel = viewModel()
+    addTripViewModel: AddTripViewModel = viewModel(),
+    geoViewModel: GeoViewModel,
+    tripViewModel: TripViewModel
 ) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -94,6 +98,8 @@ fun AddTripScreen(
                 Button(
                     onClick = {
                         showDialog = false
+                        geoViewModel.refresh()
+                        tripViewModel.getTrips()
                         navController.navigate("main") {
                             popUpTo("addTrip") { inclusive = true }
                         }
@@ -143,7 +149,7 @@ fun AddTripScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = addTripViewModel.country ?: "Select a country")
-                Button(onClick = { navController.navigate("countrySelection") }) {
+                Button(onClick = { navController.navigate("addTripCountrySelection") }) {
                     Text("Select")
                 }
             }
@@ -159,7 +165,7 @@ fun AddTripScreen(
                     onClick = {
                         val selectedCountry = addTripViewModel.country
                         if (selectedCountry != null) {
-                            navController.navigate("citySelection/$selectedCountry")
+                            navController.navigate("addTripCitySelection/$selectedCountry")
                         }
                     },
                     enabled = addTripViewModel.country != null

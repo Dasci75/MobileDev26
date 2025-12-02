@@ -15,7 +15,7 @@ import com.example.mobiledev.ui.GeoViewModel
 @Composable
 fun AddCountryScreen(
     navController: NavController,
-    geoViewModel: GeoViewModel
+    from: String?
 ) {
     var countryName by remember { mutableStateOf("") }
 
@@ -36,8 +36,13 @@ fun AddCountryScreen(
         Button(
             onClick = {
                 if (countryName.isNotBlank()) {
-                    geoViewModel.addCountry(countryName)
-                    navController.popBackStack()
+                    if (from == "addTrip") {
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCountry", countryName)
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("isNewCountry", true)
+                        navController.popBackStack("addTrip", inclusive = false)
+                    } else {
+                        navController.popBackStack()
+                    }
                 }
             }
         ) {

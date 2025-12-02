@@ -17,7 +17,7 @@ import com.example.mobiledev.ui.CityViewModelFactory
 fun AddCityScreen(
     navController: NavController,
     countryName: String?,
-    cityViewModel: CityViewModel
+    from: String?
 ) {
     if (countryName == null) {
         // Handle error: countryName is required
@@ -43,9 +43,19 @@ fun AddCityScreen(
         Button(
             onClick = {
                 if (cityName.isNotBlank()) {
-                    cityViewModel.addCity(cityName)
-                    navController.previousBackStackEntry?.savedStateHandle?.set("newCity", cityName)
-                    navController.popBackStack()
+                    if (from == "addTrip") {
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCity", cityName)
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("isNewCity", true)
+                        navController.popBackStack("addTrip", inclusive = false)
+                    } else if (from == "addTripCitySelection") {
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCity", cityName)
+                        navController.getBackStackEntry("addTrip").savedStateHandle.set("isNewCity", true)
+                        navController.popBackStack("addTrip", inclusive = false)
+                    } else if (from == "citySelection") {
+                        navController.previousBackStackEntry?.savedStateHandle?.set("selectedCity", cityName)
+                        navController.previousBackStackEntry?.savedStateHandle?.set("isNewCity", true)
+                        navController.popBackStack()
+                    }
                 }
             }
         ) {

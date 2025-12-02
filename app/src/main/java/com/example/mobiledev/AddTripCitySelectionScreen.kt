@@ -36,7 +36,7 @@ import androidx.compose.foundation.layout.padding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CitySelectionScreen(
+fun AddTripCitySelectionScreen(
     navController: NavController,
     countryName: String?,
     cityViewModel: CityViewModel,
@@ -78,12 +78,12 @@ fun CitySelectionScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         item {
-                            Button(onClick = { navController.navigate("addCity/citySelection") }) {
+                            Button(onClick = { navController.navigate("addCity/addTripCitySelection") }) {
                                 Text("Add City")
                             }
                         }
                         items(state.cities) { city ->
-                            CityItem(city = city, navController = navController)
+                            AddTripCityItem(city = city, navController = navController, country = countryName)
                         }
                     }
                 }
@@ -93,12 +93,14 @@ fun CitySelectionScreen(
 }
 
 @Composable
-fun CityItem(city: String, navController: NavController) {
+fun AddTripCityItem(city: String, navController: NavController, country: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.navigate("main?city=$city")
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCity", city)
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
+                navController.popBackStack("addTrip", false)
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {

@@ -28,48 +28,21 @@ class GeoViewModel : ViewModel() {
         return normalized.replace("\\p{InCombiningDiacriticalMarks}".toRegex(), "").lowercase()
     }
 
-    fun getCountries() {
+    private fun getCountries() {
         viewModelScope.launch {
             _countryState.value = CountryUiState.Loading
             try {
                 val db = Firebase.firestore
-                val tripsResult = db.collection("trips").get().await()
-                val countriesFromTrips = tripsResult.toObjects(Trip::class.java).mapNotNull { it.country }.distinct()
-
-                val countriesResult = db.collection("countries").get().await()
-                val countriesFromCountries = countriesResult.map { it.id }.distinct()
-
-                val allCountries = (countriesFromTrips + countriesFromCountries).distinct().sorted()
-                _countryState.value = CountryUiState.Success(allCountries)
+                val result = db.collection("trips").get().await()
+                val countries = result.documents.mapNotNull { it.getString("country") }.distinct().sorted()
+                _countryState.value = CountryUiState.Success(countries)
             } catch (e: Exception) {
-                Log.e("GeoViewModel", "Error fetching countries", e)
                 _countryState.value = CountryUiState.Error
             }
         }
     }
 
-    fun addCountry(countryName: String) {
-        viewModelScope.launch {
-            try {
-                val db = Firebase.firestore
-                val capitalizedCountryName = countryName.split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
-                val normalizedCountryName = normalizeString(capitalizedCountryName)
 
-                val countriesQuery = db.collection("countries").get().await()
-                val existingCountries = countriesQuery.map { normalizeString(it.id) }
-                if (existingCountries.contains(normalizedCountryName)) {
-                    return@launch
-                }
-
-
-                
-                db.collection("countries").document(capitalizedCountryName).set(mapOf("name" to capitalizedCountryName)).await()
-                getCountries() // Refresh the list
-            } catch (e: Exception) {
-                Log.e("GeoViewModel", "Error adding country", e)
-            }
-        }
-    }
 
     fun refresh() {
         getCountries()
