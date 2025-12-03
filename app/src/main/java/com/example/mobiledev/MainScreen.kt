@@ -67,108 +67,111 @@ fun MainScreen(
     var selectedCountry by remember { mutableStateOf<String?>(null) }
     var selectedCity by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    var searchText by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
-                if (location != null) {
-                    userLocation = GeoPoint(location.latitude, location.longitude)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(selectedCountry) {
-        selectedCountry?.let {
-            geoViewModel.getCities(it)
-            selectedCity = null // Reset city when country changes
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-        ) {
-            TopBar(
-                searchText = searchText,
-                onSearchTextChange = { searchText = it },
-                onFilterClick = { showFilterDialog = true }
-            )
-
-            if (showFilterDialog) {
-                FilterDialog(
-                    countryState = countryState,
-                    cityState = cityState,
-                    categoryState = categoryState,
-                    selectedCountry = selectedCountry,
-                    selectedCity = selectedCity,
-                    selectedCategory = selectedCategory,
-                    onCountrySelected = { selectedCountry = it },
-                    onCitySelected = { selectedCity = it },
-                    onCategorySelected = { selectedCategory = it },
-                    onDismiss = { showFilterDialog = false },
-                    onSearch = {
-                        tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
-                        showFilterDialog = false
-                    },
-                    onClear = {
-                        selectedCountry = null
-                        selectedCity = null
-                        selectedCategory = null
-                        tripViewModel.getTrips(null, null, null)
-                        showFilterDialog = false
-                    }
-                )
-            }
-
-            when (val state = tripState) {
-                is TripUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is TripUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Error fetching trips")
-                    }
-                }
-                is TripUiState.Success -> {
-                    val filteredTrips = state.trips.filter {
-                        it.name?.contains(searchText, ignoreCase = true) == true
-                    }
-
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        TripList(
-                            modifier = Modifier.weight(1f),
-                            trips = filteredTrips,
-                            navController = navController
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                        ) {
-                            OsmMapView(trips = filteredTrips, userLocation = userLocation)
+                var searchText by remember { mutableStateOf("") }
+    
+                val isFilterApplied = selectedCountry != null || selectedCity != null || selectedCategory != null
+    
+                LaunchedEffect(Unit) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
+                            if (location != null) {
+                                userLocation = GeoPoint(location.latitude, location.longitude)
+                            }
                         }
                     }
                 }
-            }
-        }
-        FloatingActionButton(
-            onClick = { navController.navigate("addTrip") },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Trip")
-        }
-    }
-}
+    
+                LaunchedEffect(selectedCountry) {
+                    selectedCountry?.let {
+                        geoViewModel.getCities(it)
+                        selectedCity = null // Reset city when country changes
+                    }
+                }
+    
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5))
+                    ) {
+                        TopBar(
+                            searchText = searchText,
+                            onSearchTextChange = { searchText = it },
+                            onFilterClick = { showFilterDialog = true }
+                        )
+    
+                        if (showFilterDialog) {
+                            FilterDialog(
+                                countryState = countryState,
+                                cityState = cityState,
+                                categoryState = categoryState,
+                                selectedCountry = selectedCountry,
+                                selectedCity = selectedCity,
+                                selectedCategory = selectedCategory,
+                                onCountrySelected = { selectedCountry = it },
+                                onCitySelected = { selectedCity = it },
+                                onCategorySelected = { selectedCategory = it },
+                                onDismiss = { showFilterDialog = false },
+                                onSearch = {
+                                    tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
+                                    showFilterDialog = false
+                                },
+                                onClear = {
+                                    selectedCountry = null
+                                    selectedCity = null
+                                    selectedCategory = null
+                                    tripViewModel.getTrips(null, null, null)
+                                    showFilterDialog = false
+                                }
+                            )
+                        }
+    
+                        when (val state = tripState) {
+                            is TripUiState.Loading -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                            is TripUiState.Error -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("Error fetching trips")
+                                }
+                            }
+                            is TripUiState.Success -> {
+                                val filteredTrips = state.trips.filter {
+                                    it.name?.contains(searchText, ignoreCase = true) == true
+                                }
+    
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    TripList(
+                                        modifier = if (!isFilterApplied) Modifier.fillMaxHeight() else Modifier.weight(1f),
+                                        trips = filteredTrips,
+                                        navController = navController
+                                    )
+    
+                                    if (isFilterApplied) { // Only show map if a filter is applied
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(16.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                        ) {
+                                            OsmMapView(trips = filteredTrips, userLocation = userLocation)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    FloatingActionButton(
+                        onClick = { navController.navigate("addTrip") },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Trip")
+                    }
+                }}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
