@@ -53,7 +53,7 @@ fun AddTripCountrySelectionScreen(
             is CountryUiState.Success -> {
                 PullToRefreshBox(
                     isRefreshing = uiState is CountryUiState.Loading,
-                    onRefresh = { geoViewModel.refresh() }
+                    onRefresh = { geoViewModel.refreshCountries() }
                 ) {
                     LazyColumn(
                         modifier = Modifier
@@ -83,8 +83,8 @@ fun AddTripCountryItem(country: String, navController: NavController) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
-                navController.previousBackStackEntry?.savedStateHandle?.set("isNewCountry", false)
+                navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCountry", country)
+                navController.getBackStackEntry("addTrip").savedStateHandle.set("isNewCountry", false)
                 navController.popBackStack("addTrip", false)
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)

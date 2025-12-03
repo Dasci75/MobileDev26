@@ -5,20 +5,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.mobiledev.ui.Screen
 import com.example.mobiledev.ui.theme.MobileDevTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -26,14 +22,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import com.example.mobiledev.AddTripScreen
 import com.example.mobiledev.ui.GeoViewModel
 import com.example.mobiledev.ui.TripViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.navigation
-import com.example.mobiledev.ui.CityViewModel
-import com.example.mobiledev.ui.CityViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -79,8 +71,6 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val startDestination = if (isLoggedIn) "main" else "login"
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
 
                     Scaffold(
                         topBar = {
@@ -88,7 +78,8 @@ class MainActivity : ComponentActivity() {
                         },
                         bottomBar = {
                             if (isLoggedIn) { // Only show bottom bar if logged in
-                                BottomNavigationBar(navController = navController)
+                                val tripViewModel: TripViewModel = viewModel()
+                                BottomNavigationBar(navController = navController, tripViewModel = tripViewModel)
                             }
                         }
                     ) { paddingValues ->
@@ -100,12 +91,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }, paddingValues = paddingValues)
                             }
-                            composable(
-                                "main?city={city}",
-                                arguments = listOf(navArgument("city") { nullable = true })
-                            ) { backStackEntry ->
-                                val city = backStackEntry.arguments?.getString("city")
-                                MainScreen(navController = navController, city = city, paddingValues = paddingValues)
+                            composable("main") {
+                                MainScreen(navController = navController, paddingValues = paddingValues)
                             }
                             composable("tripDetails/{tripId}") { backStackEntry ->
                                 val tripId = backStackEntry.arguments?.getString("tripId")
@@ -114,43 +101,7 @@ class MainActivity : ComponentActivity() {
                             composable("settings") {
                                 SettingsScreen(navController = navController, auth = auth, paddingValues = paddingValues)
                             }
-                            composable("countrySelection") {
-                                CountrySelectionScreen(navController = navController, geoViewModel = geoViewModel, paddingValues = paddingValues)
-                            }
-                            navigation(
-                                startDestination = "cityList",
-                                route = "citySelection/{country}"
-                            ) {
-                                composable("cityList") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("citySelection/{country}")
-                                    }
-                                    val country = parentEntry.arguments?.getString("country")
-                                    val cityViewModel: CityViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = CityViewModelFactory(country!!)
-                                    )
-                                    CitySelectionScreen(
-                                        navController = navController,
-                                        countryName = country,
-                                        cityViewModel = cityViewModel,
-                                        paddingValues = paddingValues
-                                    )
-                                }
-                                composable("addCity/{from}") { backStackEntry ->
-                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("citySelection/{country}")
-                                    }
-                                    val country = parentEntry.arguments?.getString("country")
-                                    val from = backStackEntry.arguments?.getString("from")
-                                    AddCityScreen(
-                                        navController = navController,
-                                        countryName = country,
-                                        from = from
-                                    )
-                                }
-                            }
-                            composable("chat") { 
+                            composable("chat") {
                                 ChatListScreen(navController = navController, paddingValues = paddingValues)
                             }
                             composable("chat/{chatId}") { backStackEntry ->
@@ -185,29 +136,26 @@ class MainActivity : ComponentActivity() {
                                         navController.getBackStackEntry("addTripCitySelection/{country}")
                                     }
                                     val country = parentEntry.arguments?.getString("country")
-                                    val cityViewModel: CityViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = CityViewModelFactory(country!!)
-                                    )
                                     AddTripCitySelectionScreen(
                                         navController = navController,
                                         countryName = country,
-                                        cityViewModel = cityViewModel,
-                                        paddingValues = paddingValues
+                                        paddingValues = paddingValues,
+                                        geoViewModel = geoViewModel
                                     )
                                 }
-                                                                composable("addCity/{from}") { backStackEntry ->
-                                                                    val parentEntry = remember(backStackEntry) {
-                                                                        navController.getBackStackEntry("addTripCitySelection/{country}")
-                                                                    }
-                                                                    val country = parentEntry.arguments?.getString("country")
-                                                                    val from = backStackEntry.arguments?.getString("from")
-                                                                    AddCityScreen(
-                                                                        navController = navController,
-                                                                        countryName = country,
-                                                                        from = from
-                                                                    )
-                                                                }                            }
+                                composable("addCity/{from}") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addTripCitySelection/{country}")
+                                    }
+                                    val country = parentEntry.arguments?.getString("country")
+                                    val from = backStackEntry.arguments?.getString("from")
+                                    AddCityScreen(
+                                        navController = navController,
+                                        countryName = country,
+                                        from = from
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -217,7 +165,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavController) {
+fun BottomNavigationBar(navController: NavController, tripViewModel: TripViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -237,13 +185,23 @@ fun BottomNavigationBar(navController: NavController) {
                 label = { Text(screen.label) },
                 selected = currentRoute?.startsWith(screen.route) == true,
                 onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                            inclusive = false // Ensure the start destination itself is not popped
+                    if (screen.route == "main") {
+                        tripViewModel.getTrips(null, null, null)
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.id) { // Pop everything including the start destination
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } else { // For other tabs, use the standard popUpTo logic
+                        navController.navigate(screen.route) {
+                            popUpTo("main") {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(

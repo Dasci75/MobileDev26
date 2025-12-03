@@ -2,17 +2,16 @@ package com.example.mobiledev
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -35,9 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.mobiledev.data.Trip
-import com.example.mobiledev.ui.RatingBar
-import com.example.mobiledev.ui.TripUiState
-import com.example.mobiledev.ui.TripViewModel
+import com.example.mobiledev.ui.*
 import com.example.mobiledev.ui.theme.MobileDevTheme
 import com.google.android.gms.location.LocationServices
 import org.osmdroid.config.Configuration
@@ -52,14 +50,24 @@ private const val TAG = "MainScreen"
 @Composable
 fun MainScreen(
     navController: NavController,
-    city: String? = null,
     tripViewModel: TripViewModel = viewModel(),
-    paddingValues: PaddingValues // Added paddingValues parameter
+    geoViewModel: GeoViewModel = viewModel(),
+    paddingValues: PaddingValues
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
+    val categoryState by tripViewModel.categoryState.collectAsState()
+    val countryState by geoViewModel.countryState.collectAsState()
+    val cityState by geoViewModel.cityState.collectAsState()
+
     val context = LocalContext.current
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     var userLocation by remember { mutableStateOf<GeoPoint?>(null) }
+
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var selectedCountry by remember { mutableStateOf<String?>(null) }
+    var selectedCity by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var searchText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -71,67 +79,81 @@ fun MainScreen(
         }
     }
 
-    val currentOnGetTrips by rememberUpdatedState(tripViewModel::getTrips)
-    LaunchedEffect(key1 = Unit) {
-        Log.d(TAG, "MainScreen LaunchedEffect: Calling getTrips()")
-        currentOnGetTrips()
+    LaunchedEffect(selectedCountry) {
+        selectedCountry?.let {
+            geoViewModel.getCities(it)
+            selectedCity = null // Reset city when country changes
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5)) // Light gray background
+                .background(Color(0xFFF5F5F5))
         ) {
-            SearchBar(navController = navController)
+            TopBar(
+                searchText = searchText,
+                onSearchTextChange = { searchText = it },
+                onFilterClick = { showFilterDialog = true }
+            )
+
+            if (showFilterDialog) {
+                FilterDialog(
+                    countryState = countryState,
+                    cityState = cityState,
+                    categoryState = categoryState,
+                    selectedCountry = selectedCountry,
+                    selectedCity = selectedCity,
+                    selectedCategory = selectedCategory,
+                    onCountrySelected = { selectedCountry = it },
+                    onCitySelected = { selectedCity = it },
+                    onCategorySelected = { selectedCategory = it },
+                    onDismiss = { showFilterDialog = false },
+                    onSearch = {
+                        tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
+                        showFilterDialog = false
+                    },
+                    onClear = {
+                        selectedCountry = null
+                        selectedCity = null
+                        selectedCategory = null
+                        tripViewModel.getTrips(null, null, null)
+                        showFilterDialog = false
+                    }
+                )
+            }
+
             when (val state = tripState) {
                 is TripUiState.Loading -> {
-                    Log.d(TAG, "TripUiState: Loading")
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
                 is TripUiState.Error -> {
-                    Log.d(TAG, "TripUiState: Error")
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Error fetching trips")
                     }
                 }
                 is TripUiState.Success -> {
-                    Log.d(TAG, "TripUiState: Success with ${state.trips.size} trips")
-                    val tripsToShow = if (city != null) {
-                        state.trips.filter { it.cityId.equals(city, ignoreCase = true) }
-                    } else {
-                        state.trips
+                    val filteredTrips = state.trips.filter {
+                        it.name?.contains(searchText, ignoreCase = true) == true
                     }
 
-                    // Use a Column to display the list and then the map
                     Column(modifier = Modifier.fillMaxSize()) {
                         TripList(
-                            modifier = if (city != null && tripsToShow.isNotEmpty()) Modifier.height(300.dp) else Modifier.fillMaxHeight(),
-                            trips = tripsToShow,
+                            modifier = Modifier.weight(1f),
+                            trips = filteredTrips,
                             navController = navController
                         )
 
-                        if (city != null && tripsToShow.isNotEmpty()) {
-                            // The map takes the remaining space
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(16.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                            ) {
-                                OsmMapView(trips = tripsToShow, userLocation = userLocation)
-                            }
-                        } else if (city == null) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(16.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                            ) {
-                                OsmMapView(trips = emptyList(), userLocation = userLocation)
-                            }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(16.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        ) {
+                            OsmMapView(trips = filteredTrips, userLocation = userLocation)
                         }
                     }
                 }
@@ -150,37 +172,172 @@ fun MainScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBar(navController: NavController) {
-    Card(
+fun TopBar(searchText: String, onSearchTextChange: (String) -> Unit, onFilterClick: () -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { navController.navigate("countrySelection") },
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            placeholder = { Text("Search for a city") },
-            trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent
-            ),
-            enabled = false
-        )
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = onSearchTextChange,
+                placeholder = { Text("Search for a trip") },
+                trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent
+                )
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onFilterClick) {
+            Icon(Icons.Default.FilterList, contentDescription = "Filter Trips")
+        }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterDialog(
+    countryState: CountryUiState,
+    cityState: CityUiState,
+    categoryState: CategoryUiState,
+    selectedCountry: String?,
+    selectedCity: String?,
+    selectedCategory: String?,
+    onCountrySelected: (String) -> Unit,
+    onCitySelected: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSearch: () -> Unit,
+    onClear: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text("Filters", style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Country Dropdown
+                FilterDropdown(
+                    label = "Select Country",
+                    state = countryState,
+                    selectedValue = selectedCountry,
+                    onSelected = onCountrySelected
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // City Dropdown
+                FilterDropdown(
+                    label = "Select City",
+                    state = cityState,
+                    selectedValue = selectedCity,
+                    onSelected = onCitySelected,
+                    enabled = selectedCountry != null
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Category Dropdown
+                FilterDropdown(
+                    label = "Select Category",
+                    state = categoryState,
+                    selectedValue = selectedCategory,
+                    onSelected = onCategorySelected
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onClear) {
+                        Text("Clear")
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onSearch) {
+                        Text("Search")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterDropdown(
+    label: String,
+    state: Any, // CountryUiState, CityUiState, or CategoryUiState
+    selectedValue: String?,
+    onSelected: (String) -> Unit,
+    enabled: Boolean = true
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val items = when (state) {
+        is CountryUiState.Success -> state.countries
+        is CityUiState.Success -> state.cities
+        is CategoryUiState.Success -> state.categories
+        else -> emptyList()
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (enabled) expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedValue ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            enabled = enabled
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item) },
+                    onClick = {
+                        onSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun TripList(modifier: Modifier = Modifier, trips: List<Trip>, navController: NavController) {
     if (trips.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No trips found for this location.")
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No trips found.")
         }
     } else {
         LazyColumn(
@@ -202,13 +359,12 @@ fun TripItem(trip: Trip, navController: NavController) {
             .fillMaxWidth()
             .clickable { navController.navigate("tripDetails/${trip.id}") },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Changed to surface for better contrast
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            val context = LocalContext.current
             AsyncImage(
-                model = ImageRequest.Builder(context)
+                model = ImageRequest.Builder(LocalContext.current)
                     .data(trip.photoUrl?.get("photo1"))
                     .crossfade(true)
                     .build(),
@@ -218,7 +374,7 @@ fun TripItem(trip: Trip, navController: NavController) {
                     .height(180.dp)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .background(Color.Gray.copy(alpha = 0.5f)),
-                contentScale = ContentScale.Crop // Use imported ContentScale
+                contentScale = ContentScale.Crop
             )
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -227,14 +383,14 @@ fun TripItem(trip: Trip, navController: NavController) {
                     text = trip.name ?: "Unknown Trip",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 20.sp // Larger font for name
+                    fontSize = 20.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = trip.description ?: "No description available.",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2, // Limit description to 2 lines
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -260,28 +416,28 @@ fun OsmMapView(trips: List<Trip>, userLocation: GeoPoint?) {
         },
         update = { mapView ->
             mapView.overlays.clear()
-            if (trips.isNotEmpty()) {
-                val validTrips = trips.filter { it.latitude != null && it.longitude != null }
-                if (validTrips.isNotEmpty()) {
-                    validTrips.forEach { trip ->
-                        val geoPoint = GeoPoint(trip.latitude!!, trip.longitude!!)
-                        val marker = Marker(mapView)
-                        marker.position = geoPoint
-                        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        marker.title = trip.name
-                        mapView.overlays.add(marker)
+            val validTrips = trips.filter { it.latitude != null && it.longitude != null }
+            if (validTrips.isNotEmpty()) {
+                validTrips.forEach { trip ->
+                    val geoPoint = GeoPoint(trip.latitude!!, trip.longitude!!)
+                    val marker = Marker(mapView).apply {
+                        position = geoPoint
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        title = trip.name
                     }
-                    val firstTripPoint = GeoPoint(validTrips[0].latitude!!, validTrips[0].longitude!!)
-                    mapView.controller.setZoom(15.0)
-                    mapView.controller.setCenter(firstTripPoint)
+                    mapView.overlays.add(marker)
                 }
+                val firstTripPoint = GeoPoint(validTrips[0].latitude!!, validTrips[0].longitude!!)
+                mapView.controller.setZoom(15.0)
+                mapView.controller.setCenter(firstTripPoint)
             } else if (userLocation != null) {
                 mapView.controller.setZoom(15.0)
                 mapView.controller.setCenter(userLocation)
-                val marker = Marker(mapView)
-                marker.position = userLocation
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                marker.title = "My Location"
+                val marker = Marker(mapView).apply {
+                    position = userLocation
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    title = "My Location"
+                }
                 mapView.overlays.add(marker)
             }
             mapView.invalidate()
@@ -295,7 +451,6 @@ fun MainScreenPreview() {
     MobileDevTheme {
         MainScreen(
             navController = rememberNavController(),
-            city = null,
             paddingValues = PaddingValues(0.dp)
         )
     }

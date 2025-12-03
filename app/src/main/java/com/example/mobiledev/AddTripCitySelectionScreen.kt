@@ -21,8 +21,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 import androidx.compose.runtime.getValue
-import com.example.mobiledev.ui.CityViewModel
-import com.example.mobiledev.ui.CityViewModelFactory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobiledev.ui.CityUiState
 import androidx.compose.runtime.collectAsState
@@ -33,14 +31,15 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import com.example.mobiledev.ui.GeoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTripCitySelectionScreen(
     navController: NavController,
     countryName: String?,
-    cityViewModel: CityViewModel,
-    paddingValues: PaddingValues // Added paddingValues parameter
+    paddingValues: PaddingValues,
+    geoViewModel: GeoViewModel = viewModel()
 ) {
     if (countryName == null) {
         Box(
@@ -54,7 +53,11 @@ fun AddTripCitySelectionScreen(
         return
     }
 
-    val uiState by cityViewModel.cityState.collectAsState()
+    LaunchedEffect(countryName) {
+        geoViewModel.getCities(countryName)
+    }
+
+    val uiState by geoViewModel.cityState.collectAsState()
 
     Box(
         modifier = Modifier
@@ -66,25 +69,20 @@ fun AddTripCitySelectionScreen(
             is CityUiState.Loading -> CircularProgressIndicator()
             is CityUiState.Error -> Text("Error: Could not load cities.")
             is CityUiState.Success -> {
-                PullToRefreshBox(
-                    isRefreshing = uiState is CityUiState.Loading,
-                    onRefresh = { cityViewModel.refresh() }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF5F5F5)),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFFF5F5F5)),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item {
-                            Button(onClick = { navController.navigate("addCity/addTripCitySelection") }) {
-                                Text("Add City")
-                            }
+                    item {
+                        Button(onClick = { navController.navigate("addCity/addTripCitySelection") }) {
+                            Text("Add City")
                         }
-                        items(state.cities) { city ->
-                            AddTripCityItem(city = city, navController = navController, country = countryName)
-                        }
+                    }
+                    items(state.cities) { city ->
+                        AddTripCityItem(city = city, navController = navController, country = countryName)
                     }
                 }
             }
@@ -98,8 +96,8 @@ fun AddTripCityItem(city: String, navController: NavController, country: String)
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCity", city)
-                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
+                navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCity", city)
+                navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCountry", country)
                 navController.popBackStack("addTrip", false)
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)

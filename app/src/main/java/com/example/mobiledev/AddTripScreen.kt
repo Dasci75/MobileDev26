@@ -98,8 +98,8 @@ fun AddTripScreen(
                 Button(
                     onClick = {
                         showDialog = false
-                        geoViewModel.refresh()
-                        tripViewModel.getTrips()
+                        geoViewModel.refreshCountries()
+                        tripViewModel.getTrips(null, null, null)
                         navController.navigate("main") {
                             popUpTo("addTrip") { inclusive = true }
                         }
