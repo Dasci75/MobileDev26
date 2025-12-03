@@ -77,7 +77,7 @@ fun AddTripCitySelectionScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        Button(onClick = { navController.navigate("addCity/addTripCitySelection") }) {
+                        Button(onClick = { navController.navigate("addCity/$countryName") }) {
                             Text("Add City")
                         }
                     }
@@ -96,9 +96,9 @@ fun AddTripCityItem(city: String, navController: NavController, country: String)
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCity", city)
-                navController.getBackStackEntry("addTrip").savedStateHandle.set("selectedCountry", country)
-                navController.popBackStack("addTrip", false)
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCity", city)
+                navController.previousBackStackEntry?.savedStateHandle?.set("selectedCountry", country)
+                navController.popBackStack()
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {

@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +26,8 @@ import com.google.firebase.ktx.Firebase
 import com.example.mobiledev.ui.GeoViewModel
 import com.example.mobiledev.ui.TripViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.navigation
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -72,9 +74,33 @@ class MainActivity : ComponentActivity() {
 
                     val startDestination = if (isLoggedIn) "main" else "login"
 
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
+
                     Scaffold(
                         topBar = {
-                            TopAppBar(title = { Text("CityTrip") })
+                            if (currentRoute != "login") {
+                                TopAppBar(
+                                    title = {
+                                        val title = when (currentRoute) {
+                                            "chat/{chatId}" -> "Chat"
+                                            "chat" -> "Chats"
+                                            else -> "CityTrip"
+                                        }
+                                        Text(title)
+                                    },
+                                    navigationIcon = {
+                                        if (currentRoute == "chat/{chatId}") {
+                                            IconButton(onClick = { navController.popBackStack() }) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                    contentDescription = "Back"
+                                                )
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         },
                         bottomBar = {
                             if (isLoggedIn) { // Only show bottom bar if logged in
@@ -119,42 +145,28 @@ class MainActivity : ComponentActivity() {
                                 val from = backStackEntry.arguments?.getString("from")
                                 AddCountryScreen(navController = navController, from = from)
                             }
-                            navigation(
-                                startDestination = "addTripCountryList",
-                                route = "addTripCountrySelection"
-                            ) {
-                                composable("addTripCountryList") {
-                                    AddTripCountrySelectionScreen(navController = navController, geoViewModel = geoViewModel, paddingValues = paddingValues)
-                                }
+                            composable("addTripCountrySelection") {
+                                AddTripCountrySelectionScreen(navController = navController, geoViewModel = geoViewModel, paddingValues = paddingValues)
                             }
-                            navigation(
-                                startDestination = "addTripCityList",
-                                route = "addTripCitySelection/{country}"
-                            ) {
-                                composable("addTripCityList") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addTripCitySelection/{country}")
-                                    }
-                                    val country = parentEntry.arguments?.getString("country")
-                                    AddTripCitySelectionScreen(
-                                        navController = navController,
-                                        countryName = country,
-                                        paddingValues = paddingValues,
-                                        geoViewModel = geoViewModel
-                                    )
-                                }
-                                composable("addCity/{from}") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addTripCitySelection/{country}")
-                                    }
-                                    val country = parentEntry.arguments?.getString("country")
-                                    val from = backStackEntry.arguments?.getString("from")
-                                    AddCityScreen(
-                                        navController = navController,
-                                        countryName = country,
-                                        from = from
-                                    )
-                                }
+                            composable(
+                                "addTripCitySelection/{countryName}",
+                                arguments = listOf(navArgument("countryName") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val countryName = backStackEntry.arguments?.getString("countryName")
+                                AddTripCitySelectionScreen(
+                                    navController = navController,
+                                    countryName = countryName,
+                                    paddingValues = paddingValues,
+                                    geoViewModel = geoViewModel
+                                )
+                            }
+                            composable("addCity/{countryName}") { backStackEntry ->
+                                val countryName = backStackEntry.arguments?.getString("countryName")
+                                AddCityScreen(
+                                    navController = navController,
+                                    countryName = countryName,
+                                    from = "addTripCitySelection"
+                                )
                             }
                         }
                     }

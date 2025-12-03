@@ -7,5 +7,7 @@ data class Chat(
     val userIds: List<String> = emptyList(),
     val lastMessage: Message? = null,
     val tripId: String? = null,
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val chatName: String = "",
+    val chatPhotoUrl: String = ""
 )

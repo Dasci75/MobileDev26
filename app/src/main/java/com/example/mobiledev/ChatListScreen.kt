@@ -25,10 +25,21 @@ import com.example.mobiledev.data.Chat
 import com.example.mobiledev.ui.ChatViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 @Composable
 fun ChatListScreen(navController: NavController, chatViewModel: ChatViewModel = viewModel(), paddingValues: PaddingValues) {
     val chats by chatViewModel.chats.collectAsState()
+
+    // Haal de UID op van de huidige gebruiker (bijv. "rumWV...")
+    val currentUser = Firebase.auth.currentUser
+    val currentUserId = currentUser?.uid
 
     LazyColumn(
         modifier = Modifier
@@ -38,7 +49,8 @@ fun ChatListScreen(navController: NavController, chatViewModel: ChatViewModel = 
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(chats) { chat ->
-            ChatItem(chat = chat) {
+            // Geef de ID door aan ChatItem
+            ChatItem(chat = chat, currentUserId = currentUserId) {
                 navController.navigate("chat/${chat.id}")
             }
         }
@@ -46,8 +58,31 @@ fun ChatListScreen(navController: NavController, chatViewModel: ChatViewModel = 
 }
 
 @Composable
-fun ChatItem(chat: Chat, onClick: () -> Unit) {
+fun ChatItem(chat: Chat, currentUserId: String?, onClick: () -> Unit) {
     val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    // 1. Zoek het ID van de andere persoon (het ID dat NIET gelijk is aan mijn ID)
+    val otherUserId = chat.userIds.firstOrNull { it != currentUserId }
+
+    // 2. Maak een variabele om het e-mailadres in op te slaan (standaard even "Laden...")
+    var otherUserEmail by remember { mutableStateOf("Laden...") }
+
+    // 3. Haal de gegevens op uit Firestore zodra dit item op het scherm komt
+    LaunchedEffect(otherUserId) {
+        if (otherUserId != null) {
+            Firebase.firestore.collection("users").document(otherUserId).get()
+                .addOnSuccessListener { document ->
+                    // Haal het veld 'email' op uit het user document
+                    // Pas "email" aan als je veld in de database anders heet (bijv. "mail" of "username")
+                    otherUserEmail = document.getString("email") ?: "Geen email gevonden"
+                }
+                .addOnFailureListener {
+                    otherUserEmail = "Fout bij laden"
+                }
+        } else {
+            otherUserEmail = "Zelf of onbekend"
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -59,7 +94,12 @@ fun ChatItem(chat: Chat, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Chat with owner", fontWeight = FontWeight.Bold) // Placeholder
+                // 4. Toon hier het opgehaalde e-mailadres
+                Text(
+                    text = otherUserEmail,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
                 chat.lastMessage?.let {
                     Text(text = it.text, style = MaterialTheme.typography.bodySmall)
                 }
