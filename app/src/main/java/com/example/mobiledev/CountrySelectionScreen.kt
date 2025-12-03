@@ -62,11 +62,6 @@ fun CountrySelectionScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item {
-                            Button(onClick = { navController.navigate("addCountry/countrySelection") }) {
-                                Text("Add Country")
-                            }
-                        }
                         items(state.countries) { country ->
                             CountryItem(country = country, navController = navController)
                         }

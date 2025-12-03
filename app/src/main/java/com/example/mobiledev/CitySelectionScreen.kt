@@ -77,11 +77,6 @@ fun CitySelectionScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item {
-                            Button(onClick = { navController.navigate("addCity/citySelection") }) {
-                                Text("Add City")
-                            }
-                        }
                         items(state.cities) { city ->
                             CityItem(city = city, navController = navController)
                         }
