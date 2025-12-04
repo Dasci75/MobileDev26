@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
 }
 
 android {
@@ -71,5 +72,15 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.6.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.8") // For Icons.Filled.Chat
     implementation("androidx.compose.material:material:1.6.8") // For pull-to-refresh
+
+    // Room
+    implementation("androidx.room:room-runtime:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1") // Use ksp for annotation processing
+    implementation("androidx.room:room-ktx:2.6.1") // Kotlin Extensions and Coroutines support for Room
+    implementation("androidx.room:room-paging:2.6.1") // Paging 3 Integration
+
+    // Kotlin Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
 }

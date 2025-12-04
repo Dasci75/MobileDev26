@@ -1,6 +1,7 @@
 package com.example.mobiledev
 
 import android.Manifest
+import android.app.Application
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.foundation.background
@@ -56,7 +57,7 @@ private const val TAG = "MainScreen"
 fun MainScreen(
     navController: NavController,
     tripViewModel: TripViewModel = viewModel(),
-    geoViewModel: GeoViewModel = viewModel(),
+    geoViewModel: GeoViewModel,
     paddingValues: PaddingValues
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
@@ -468,9 +469,11 @@ fun OsmMapView(trips: List<Trip>, userLocation: GeoPoint?) {
 @Composable
 fun MainScreenPreview() {
     MobileDevTheme {
+        val context = LocalContext.current
         MainScreen(
             navController = rememberNavController(),
-            paddingValues = PaddingValues(0.dp)
+            paddingValues = PaddingValues(0.dp),
+            geoViewModel = viewModel(factory = GeoViewModelFactory(context.applicationContext as Application))
         )
     }
 }

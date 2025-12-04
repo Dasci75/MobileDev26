@@ -28,6 +28,7 @@ import com.example.mobiledev.ui.TripViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.mobiledev.ui.GeoViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -58,7 +59,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val geoViewModel: GeoViewModel = viewModel()
+                    val geoViewModel: GeoViewModel = viewModel(factory = GeoViewModelFactory(application = application))
 
                     var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
 
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
                                 }, paddingValues = paddingValues)
                             }
                             composable("main") {
-                                MainScreen(navController = navController, paddingValues = paddingValues)
+                                MainScreen(navController = navController, paddingValues = paddingValues, geoViewModel = geoViewModel)
                             }
                             composable("tripDetails/{tripId}") { backStackEntry ->
                                 val tripId = backStackEntry.arguments?.getString("tripId")
