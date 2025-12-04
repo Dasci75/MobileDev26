@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +42,7 @@ import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.*
 import com.example.mobiledev.ui.theme.MobileDevTheme
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -46,7 +51,7 @@ import org.osmdroid.views.overlay.Marker
 
 private const val TAG = "MainScreen"
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun MainScreen(
     navController: NavController,
@@ -67,92 +72,115 @@ fun MainScreen(
     var selectedCountry by remember { mutableStateOf<String?>(null) }
     var selectedCity by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-                var searchText by remember { mutableStateOf("") }
-    
-                val isFilterApplied = selectedCountry != null || selectedCity != null || selectedCategory != null
-    
-                LaunchedEffect(Unit) {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                        fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
-                            if (location != null) {
-                                userLocation = GeoPoint(location.latitude, location.longitude)
-                            }
+    var searchText by remember { mutableStateOf("") }
+
+    val isFilterApplied = selectedCountry != null || selectedCity != null || selectedCategory != null
+
+    val coroutineScope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = {
+            coroutineScope.launch {
+                isRefreshing = true
+                tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
+                isRefreshing = false
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: android.location.Location? ->
+                if (location != null) {
+                    userLocation = GeoPoint(location.latitude, location.longitude)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(selectedCountry) {
+        selectedCountry?.let {
+            geoViewModel.getCities(it)
+            selectedCity = null // Reset city when country changes
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5))
+        ) {
+            TopBar(
+                searchText = searchText,
+                onSearchTextChange = { searchText = it },
+                onFilterClick = { showFilterDialog = true }
+            )
+
+            if (showFilterDialog) {
+                FilterDialog(
+                    countryState = countryState,
+                    cityState = cityState,
+                    categoryState = categoryState,
+                    selectedCountry = selectedCountry,
+                    selectedCity = selectedCity,
+                    selectedCategory = selectedCategory,
+                    onCountrySelected = { selectedCountry = it },
+                    onCitySelected = { selectedCity = it },
+                    onCategorySelected = { selectedCategory = it },
+                    onDismiss = { showFilterDialog = false },
+                    onSearch = {
+                        tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
+                        showFilterDialog = false
+                    },
+                    onClear = {
+                        selectedCountry = null
+                        selectedCity = null
+                        selectedCategory = null
+                        tripViewModel.getTrips(null, null, null)
+                        showFilterDialog = false
+                    }
+                )
+            }
+
+            Box(modifier = Modifier.pullRefresh(pullRefreshState)) {
+                when (val state = tripState) {
+                    is TripUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
                         }
                     }
-                }
-    
-                LaunchedEffect(selectedCountry) {
-                    selectedCountry?.let {
-                        geoViewModel.getCities(it)
-                        selectedCity = null // Reset city when country changes
-                    }
-                }
-    
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFFF5F5F5))
-                    ) {
-                        TopBar(
-                            searchText = searchText,
-                            onSearchTextChange = { searchText = it },
-                            onFilterClick = { showFilterDialog = true }
-                        )
-    
-                        if (showFilterDialog) {
-                            FilterDialog(
-                                countryState = countryState,
-                                cityState = cityState,
-                                categoryState = categoryState,
-                                selectedCountry = selectedCountry,
-                                selectedCity = selectedCity,
-                                selectedCategory = selectedCategory,
-                                onCountrySelected = { selectedCountry = it },
-                                onCitySelected = { selectedCity = it },
-                                onCategorySelected = { selectedCategory = it },
-                                onDismiss = { showFilterDialog = false },
-                                onSearch = {
-                                    tripViewModel.getTrips(selectedCountry, selectedCity, selectedCategory)
-                                    showFilterDialog = false
-                                },
-                                onClear = {
-                                    selectedCountry = null
-                                    selectedCity = null
-                                    selectedCategory = null
-                                    tripViewModel.getTrips(null, null, null)
-                                    showFilterDialog = false
-                                }
-                            )
+                    is TripUiState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Error fetching trips")
                         }
-    
-                        when (val state = tripState) {
-                            is TripUiState.Loading -> {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
+                    }
+                    is TripUiState.Success -> {
+                        val filteredTrips = state.trips.filter {
+                            it.name?.contains(searchText, ignoreCase = true) == true
+                        }
+
+                        if (filteredTrips.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No trips found.")
                             }
-                            is TripUiState.Error -> {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("Error fetching trips")
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(filteredTrips) { trip ->
+                                    TripItem(trip = trip, navController = navController)
                                 }
-                            }
-                            is TripUiState.Success -> {
-                                val filteredTrips = state.trips.filter {
-                                    it.name?.contains(searchText, ignoreCase = true) == true
-                                }
-    
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    TripList(
-                                        modifier = if (!isFilterApplied) Modifier.fillMaxHeight() else Modifier.weight(1f),
-                                        trips = filteredTrips,
-                                        navController = navController
-                                    )
-    
-                                    if (isFilterApplied) { // Only show map if a filter is applied
+
+                                if (isFilterApplied) {
+                                    item {
                                         Box(
                                             modifier = Modifier
-                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .height(300.dp) // specify a height for the map
                                                 .padding(16.dp)
                                                 .clip(RoundedCornerShape(16.dp))
                                         ) {
@@ -163,15 +191,24 @@ fun MainScreen(
                             }
                         }
                     }
-                    FloatingActionButton(
-                        onClick = { navController.navigate("addTrip") },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Trip")
-                    }
-                }}
+                }
+                PullRefreshIndicator(
+                    refreshing = isRefreshing,
+                    state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
+        }
+        FloatingActionButton(
+            onClick = { navController.navigate("addTrip") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add Trip")
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -330,26 +367,6 @@ fun FilterDropdown(
                         expanded = false
                     }
                 )
-            }
-        }
-    }
-}
-
-
-@Composable
-fun TripList(modifier: Modifier = Modifier, trips: List<Trip>, navController: NavController) {
-    if (trips.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No trips found.")
-        }
-    } else {
-        LazyColumn(
-            modifier = modifier,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(trips) { trip ->
-                TripItem(trip = trip, navController = navController)
             }
         }
     }

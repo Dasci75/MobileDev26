@@ -197,23 +197,12 @@ fun BottomNavigationBar(navController: NavController, tripViewModel: TripViewMod
                 label = { Text(screen.label) },
                 selected = currentRoute?.startsWith(screen.route) == true,
                 onClick = {
-                    if (screen.route == "main") {
-                        tripViewModel.getTrips(null, null, null)
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.id) { // Pop everything including the start destination
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
                         }
-                    } else { // For other tabs, use the standard popUpTo logic
-                        navController.navigate(screen.route) {
-                            popUpTo("main") {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(

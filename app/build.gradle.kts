@@ -70,5 +70,6 @@ dependencies {
     implementation("io.coil-kt:coil-base:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.8") // For Icons.Filled.Chat
+    implementation("androidx.compose.material:material:1.6.8") // For pull-to-refresh
 
 }
