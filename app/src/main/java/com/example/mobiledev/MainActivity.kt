@@ -83,14 +83,22 @@ class MainActivity : ComponentActivity() {
                                 TopAppBar(
                                     title = {
                                         val title = when (currentRoute) {
+                                            "tripDetails/{tripId}" -> "Trip Details"
+                                            "addTrip" -> "Add Trip"
+                                            "settings" -> "Settings"
                                             "chat/{chatId}" -> "Chat"
                                             "chat" -> "Chats"
+                                            "dashboard" -> "Dashboard"
+                                            "addCountry/{from}" -> "Add Country"
+                                            "addTripCountrySelection" -> "Select Country"
+                                            "addTripCitySelection/{countryName}" -> "Select City"
+                                            "addCity/{countryName}" -> "Add City"
                                             else -> "CityTrip"
                                         }
                                         Text(title)
                                     },
                                     navigationIcon = {
-                                        if (currentRoute == "chat/{chatId}") {
+                                        if (navController.previousBackStackEntry != null) {
                                             IconButton(onClick = { navController.popBackStack() }) {
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
