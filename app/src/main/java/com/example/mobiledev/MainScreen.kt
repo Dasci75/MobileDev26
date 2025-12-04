@@ -171,10 +171,6 @@ fun MainScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(filteredTrips) { trip ->
-                                    TripItem(trip = trip, navController = navController)
-                                }
-
                                 if (isFilterApplied) {
                                     item {
                                         Box(
@@ -187,6 +183,9 @@ fun MainScreen(
                                             OsmMapView(trips = filteredTrips, userLocation = userLocation)
                                         }
                                     }
+                                }
+                                items(filteredTrips) { trip ->
+                                    TripItem(trip = trip, navController = navController)
                                 }
                             }
                         }
