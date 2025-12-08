@@ -50,9 +50,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-
-
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.categories
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTripScreen(
@@ -242,54 +247,32 @@ fun AddTripScreen(
                 }
             }
             item {
-                Text(
-                    text = "Lat: ${addTripViewModel.latitude ?: "N/A"}, Lon: ${addTripViewModel.longitude ?: "N/A"}"
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Text(text = "Lat: ${"%.4f".format(addTripViewModel.latitude ?: 0.0)}")
+                        Text(text = "Lon: ${"%.4f".format(addTripViewModel.longitude ?: 0.0)}")
+                    }
+                }
             }
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(300.dp)
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = {
-                            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
-                            MapView(it).apply {
-                                setTileSource(TileSourceFactory.MAPNIK)
-                                setMultiTouchControls(true)
-                                controller.setZoom(15.0)
-                            }
-                        },
-                        update = { mapView ->
-                            mapView.overlays.clear()
-                            val eventsReceiver = object : MapEventsReceiver {
-                                override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                                    p?.let {
-                                        addTripViewModel.latitude = it.latitude
-                                        addTripViewModel.longitude = it.longitude
-                                    }
-                                    return true
-                                }
-
-                                override fun longPressHelper(p: GeoPoint?): Boolean {
-                                    return false
-                                }
-                            }
-                            mapView.overlays.add(MapEventsOverlay(eventsReceiver))
-
-                            val lat = addTripViewModel.latitude
-                            val lon = addTripViewModel.longitude
-                            if (lat != null && lon != null) {
-                                val geoPoint = GeoPoint(lat, lon)
-                                val marker = Marker(mapView)
-                                marker.position = geoPoint
-                                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                mapView.overlays.add(marker)
-                                mapView.controller.setCenter(geoPoint)
-                            }
-                            mapView.invalidate()
+                    OsmMapView(
+                        latitude = addTripViewModel.latitude,
+                        longitude = addTripViewModel.longitude,
+                        onMapClick = {
+                            addTripViewModel.latitude = it.latitude
+                            addTripViewModel.longitude = it.longitude
                         }
                     )
                 }
@@ -311,4 +294,48 @@ fun AddTripScreen(
             }
         }
     }
+}
+
+@Composable
+fun OsmMapView(
+    latitude: Double?,
+    longitude: Double?,
+    onMapClick: (GeoPoint) -> Unit
+) {
+    val context = LocalContext.current
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = {
+            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
+            MapView(it).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+                controller.setZoom(15.0)
+
+                val eventsReceiver = object : MapEventsReceiver {
+                    override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                        p?.let(onMapClick)
+                        return true
+                    }
+
+                    override fun longPressHelper(p: GeoPoint?): Boolean {
+                        return false
+                    }
+                }
+                overlays.add(MapEventsOverlay(eventsReceiver))
+            }
+        },
+        update = { mapView ->
+            mapView.overlays.removeIf { it is Marker }
+            if (latitude != null && longitude != null) {
+                val geoPoint = GeoPoint(latitude, longitude)
+                val marker = Marker(mapView)
+                marker.position = geoPoint
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                mapView.overlays.add(marker)
+                mapView.controller.setCenter(geoPoint)
+            }
+            mapView.invalidate()
+        }
+    )
 }
