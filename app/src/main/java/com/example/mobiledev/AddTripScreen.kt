@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -88,180 +89,192 @@ fun AddTripScreen(
     }
 
     var showDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Success") },
-            text = { Text("Trip saved successfully!") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDialog = false
-                        geoViewModel.refreshCountries()
-                        tripViewModel.getTrips(null, null, null)
-                        navController.navigate("main") {
-                            popUpTo("addTrip") { inclusive = true }
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else {
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Success") },
+                text = { Text("Trip saved successfully!") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDialog = false
+                            geoViewModel.refreshCountries()
+                            tripViewModel.getTrips(null, null, null)
+                            navController.navigate("main") {
+                                popUpTo("addTrip") { inclusive = true }
+                            }
                         }
+                    ) {
+                        Text("OK")
                     }
-                ) {
-                    Text("OK")
                 }
-            }
-        )
-    }
+            )
+        }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            OutlinedTextField(
-                value = addTripViewModel.name,
-                onValueChange = { addTripViewModel.name = it },
-                label = { Text("Trip Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = addTripViewModel.description,
-                onValueChange = { addTripViewModel.description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth().height(150.dp)
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = addTripViewModel.category,
-                onValueChange = { addTripViewModel.category = it },
-                label = { Text("Category") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = addTripViewModel.country ?: "Select a country")
-                Button(onClick = { navController.navigate("addTripCountrySelection") }) {
-                    Text("Select")
-                }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                OutlinedTextField(
+                    value = addTripViewModel.name,
+                    onValueChange = { addTripViewModel.name = it },
+                    label = { Text("Trip Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = addTripViewModel.city ?: "Select a city")
-                Button(
-                    onClick = {
-                        val selectedCountry = addTripViewModel.country
-                        if (selectedCountry != null) {
-                            navController.navigate("addTripCitySelection/$selectedCountry")
-                        }
-                    },
-                    enabled = addTripViewModel.country != null
+            item {
+                OutlinedTextField(
+                    value = addTripViewModel.description,
+                    onValueChange = { addTripViewModel.description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                )
+            }
+            item {
+                OutlinedTextField(
+                    value = addTripViewModel.category,
+                    onValueChange = { addTripViewModel.category = it },
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Select")
+                    Text(text = addTripViewModel.country ?: "Select a country")
+                    Button(onClick = { navController.navigate("addTripCountrySelection") }) {
+                        Text("Select")
+                    }
                 }
             }
-        }
-        item {
-            Button(
-                onClick = { imagePickerLauncher.launch("image/*") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Upload Photos (Max 4)")
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = addTripViewModel.city ?: "Select a city")
+                    Button(
+                        onClick = {
+                            val selectedCountry = addTripViewModel.country
+                            if (selectedCountry != null) {
+                                navController.navigate("addTripCitySelection/$selectedCountry")
+                            }
+                        },
+                        enabled = addTripViewModel.country != null
+                    ) {
+                        Text("Select")
+                    }
+                }
             }
-        }
-        item {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(addTripViewModel.photoUris) { uri ->
-                    Image(
-                        painter = rememberAsyncImagePainter(uri),
-                        contentDescription = "Selected image",
-                        modifier = Modifier
-                            .size(100.dp)
-                            .aspectRatio(1f),
-                        contentScale = ContentScale.Crop
+            item {
+                Button(
+                    onClick = { imagePickerLauncher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Upload Photos (Max 4)")
+                }
+            }
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(addTripViewModel.photoUris) { uri ->
+                        Image(
+                            painter = rememberAsyncImagePainter(uri),
+                            contentDescription = "Selected image",
+                            modifier = Modifier
+                                .size(100.dp)
+                                .aspectRatio(1f),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+            item {
+                Text(
+                    text = "Lat: ${addTripViewModel.latitude ?: "N/A"}, Lon: ${addTripViewModel.longitude ?: "N/A"}"
+                )
+            }
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = {
+                            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
+                            MapView(it).apply {
+                                setTileSource(TileSourceFactory.MAPNIK)
+                                setMultiTouchControls(true)
+                                controller.setZoom(15.0)
+                            }
+                        },
+                        update = { mapView ->
+                            mapView.overlays.clear()
+                            val eventsReceiver = object : MapEventsReceiver {
+                                override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                                    p?.let {
+                                        addTripViewModel.latitude = it.latitude
+                                        addTripViewModel.longitude = it.longitude
+                                    }
+                                    return true
+                                }
+
+                                override fun longPressHelper(p: GeoPoint?): Boolean {
+                                    return false
+                                }
+                            }
+                            mapView.overlays.add(MapEventsOverlay(eventsReceiver))
+
+                            val lat = addTripViewModel.latitude
+                            val lon = addTripViewModel.longitude
+                            if (lat != null && lon != null) {
+                                val geoPoint = GeoPoint(lat, lon)
+                                val marker = Marker(mapView)
+                                marker.position = geoPoint
+                                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                mapView.overlays.add(marker)
+                                mapView.controller.setCenter(geoPoint)
+                            }
+                            mapView.invalidate()
+                        }
                     )
                 }
             }
-        }
-        item {
-            Text(
-                text = "Lat: ${addTripViewModel.latitude ?: "N/A"}, Lon: ${addTripViewModel.longitude ?: "N/A"}"
-            )
-        }
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            ) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = {
-                        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
-                        MapView(it).apply {
-                            setTileSource(TileSourceFactory.MAPNIK)
-                            setMultiTouchControls(true)
-                            controller.setZoom(15.0)
+            item {
+                Button(
+                    onClick = {
+                        isLoading = true
+                        addTripViewModel.saveTrip {
+                            isLoading = false
+                            showDialog = true
                         }
                     },
-                    update = { mapView ->
-                        mapView.overlays.clear()
-                        val eventsReceiver = object : MapEventsReceiver {
-                            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                                p?.let {
-                                    addTripViewModel.latitude = it.latitude
-                                    addTripViewModel.longitude = it.longitude
-                                }
-                                return true
-                            }
-
-                            override fun longPressHelper(p: GeoPoint?): Boolean {
-                                return false
-                            }
-                        }
-                        mapView.overlays.add(MapEventsOverlay(eventsReceiver))
-
-                        val lat = addTripViewModel.latitude
-                        val lon = addTripViewModel.longitude
-                        if (lat != null && lon != null) {
-                            val geoPoint = GeoPoint(lat, lon)
-                            val marker = Marker(mapView)
-                            marker.position = geoPoint
-                            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                            mapView.overlays.add(marker)
-                            mapView.controller.setCenter(geoPoint)
-                        }
-                        mapView.invalidate()
-                    }
-                )
-            }
-        }
-        item {
-            Button(
-                onClick = { 
-                    addTripViewModel.saveTrip {
-                        showDialog = true
-                    }
-                },
-                enabled = addTripViewModel.isFormValid(),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Trip")
+                    enabled = addTripViewModel.isFormValid(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save Trip")
+                }
             }
         }
     }
