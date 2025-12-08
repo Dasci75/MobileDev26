@@ -59,30 +59,48 @@ fun AddTripCitySelectionScreen(
 
     val uiState by geoViewModel.cityState.collectAsState()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues), // Apply padding from parent Scaffold
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Button(
+            onClick = { navController.navigate("addCity/$countryName") },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Add City")
+        }
+
         when (val state = uiState) {
-            is CityUiState.Loading -> CircularProgressIndicator()
-            is CityUiState.Error -> Text("Error: Could not load cities.")
+            is CityUiState.Loading -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            is CityUiState.Error -> {
+                // Display nothing here.
+            }
             is CityUiState.Success -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF5F5F5)),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        Button(onClick = { navController.navigate("addCity/$countryName") }) {
-                            Text("Add City")
-                        }
+                if (state.cities.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No cities found for this country. Add one!")
                     }
-                    items(state.cities) { city ->
-                        AddTripCityItem(city = city, navController = navController, country = countryName)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5)),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(state.cities) { city ->
+                            AddTripCityItem(city = city, navController = navController, country = countryName)
+                        }
                     }
                 }
             }

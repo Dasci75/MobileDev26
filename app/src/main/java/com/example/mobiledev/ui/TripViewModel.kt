@@ -14,16 +14,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+val categories = listOf(
+    "Restaurant", "Bar", "Café", "Club", "Nachtleven", "Theater", "Bioscoop", "Museum",
+    "Kunstgalerie", "Concertzaal", "Park", "Zoo", "Dierenpark", "Escape Room", "Bowling",
+    "Arcade", "Pretpark", "Zwembad", "Wellness", "Strand", "Shopping", "Winkelcentrum",
+    "Sportevenement", "Wandeling", "Hiking", "Festival", "Markt", "Bibliotheek",
+    "Historische locatie", "Kasteel", "Monument", "Foodtruck", "Streetfood", "Karaoke bar",
+    "Comedy club", "Wijnproeverij", "Brouwerij", "Workshop", "Cursus", "Casino"
+)
+
 sealed interface TripUiState {
     data class Success(val trips: List<Trip>) : TripUiState
     object Error : TripUiState
     object Loading : TripUiState
-}
-
-sealed interface CategoryUiState {
-    data class Success(val categories: List<String>) : CategoryUiState
-    object Error : CategoryUiState
-    object Loading : CategoryUiState
 }
 
 open class TripViewModel : ViewModel() {
@@ -31,12 +34,8 @@ open class TripViewModel : ViewModel() {
     private val _tripState = MutableStateFlow<TripUiState>(TripUiState.Loading)
     open val tripState: StateFlow<TripUiState> = _tripState.asStateFlow()
 
-    private val _categoryState = MutableStateFlow<CategoryUiState>(CategoryUiState.Loading)
-    val categoryState: StateFlow<CategoryUiState> = _categoryState.asStateFlow()
-
     init {
         getTrips(null, null, null)
-        getCategories()
     }
 
     fun getTrips(country: String?, city: String?, category: String?) {
@@ -64,20 +63,6 @@ open class TripViewModel : ViewModel() {
             } catch (e: Exception) {
                 Log.e("TripViewModel", "Error fetching trips", e)
                 _tripState.value = TripUiState.Error
-            }
-        }
-    }
-
-    fun getCategories() {
-        viewModelScope.launch {
-            _categoryState.value = CategoryUiState.Loading
-            try {
-                val db = Firebase.firestore
-                val result = db.collection("trips").get().await()
-                val categories = result.documents.mapNotNull { it.getString("category") }.distinct().sorted()
-                _categoryState.value = CategoryUiState.Success(categories)
-            } catch (e: Exception) {
-                _categoryState.value = CategoryUiState.Error
             }
         }
     }

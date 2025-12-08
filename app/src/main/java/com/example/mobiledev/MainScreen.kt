@@ -42,6 +42,8 @@ import coil.request.ImageRequest
 import com.example.mobiledev.data.Trip
 import com.example.mobiledev.ui.*
 import com.example.mobiledev.ui.theme.MobileDevTheme
+import com.example.mobiledev.ui.TripUiState
+import com.example.mobiledev.ui.categories
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -61,7 +63,6 @@ fun MainScreen(
     paddingValues: PaddingValues
 ) {
     val tripState by tripViewModel.tripState.collectAsState()
-    val categoryState by tripViewModel.categoryState.collectAsState()
     val countryState by geoViewModel.countryState.collectAsState()
     val cityState by geoViewModel.cityState.collectAsState()
 
@@ -123,7 +124,7 @@ fun MainScreen(
                 FilterDialog(
                     countryState = countryState,
                     cityState = cityState,
-                    categoryState = categoryState,
+                    categories = categories, // Use the predefined categories
                     selectedCountry = selectedCountry,
                     selectedCity = selectedCity,
                     selectedCategory = selectedCategory,
@@ -250,7 +251,7 @@ fun TopBar(searchText: String, onSearchTextChange: (String) -> Unit, onFilterCli
 fun FilterDialog(
     countryState: CountryUiState,
     cityState: CityUiState,
-    categoryState: CategoryUiState,
+    categories: List<String>,
     selectedCountry: String?,
     selectedCity: String?,
     selectedCategory: String?,
@@ -277,7 +278,7 @@ fun FilterDialog(
                 // Country Dropdown
                 FilterDropdown(
                     label = "Select Country",
-                    state = countryState,
+                    items = (countryState as? CountryUiState.Success)?.countries ?: emptyList(),
                     selectedValue = selectedCountry,
                     onSelected = onCountrySelected
                 )
@@ -286,7 +287,7 @@ fun FilterDialog(
                 // City Dropdown
                 FilterDropdown(
                     label = "Select City",
-                    state = cityState,
+                    items = (cityState as? CityUiState.Success)?.cities ?: emptyList(),
                     selectedValue = selectedCity,
                     onSelected = onCitySelected,
                     enabled = selectedCountry != null
@@ -296,7 +297,7 @@ fun FilterDialog(
                 // Category Dropdown
                 FilterDropdown(
                     label = "Select Category",
-                    state = categoryState,
+                    items = categories,
                     selectedValue = selectedCategory,
                     onSelected = onCategorySelected
                 )
@@ -326,19 +327,12 @@ fun FilterDialog(
 @Composable
 fun FilterDropdown(
     label: String,
-    state: Any, // CountryUiState, CityUiState, or CategoryUiState
+    items: List<String>,
     selectedValue: String?,
     onSelected: (String) -> Unit,
     enabled: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
-
-    val items = when (state) {
-        is CountryUiState.Success -> state.countries
-        is CityUiState.Success -> state.cities
-        is CategoryUiState.Success -> state.categories
-        else -> emptyList()
-    }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
