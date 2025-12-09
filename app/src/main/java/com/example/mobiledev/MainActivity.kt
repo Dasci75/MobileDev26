@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                                 ChatScreen(chatId = chatId, paddingValues = paddingValues)
                             }
                             composable("dashboard") {
-                                DashboardScreen(paddingValues = paddingValues)
+                                DashboardScreen(navController = navController, paddingValues = paddingValues)
                             }
                             composable("addTrip") {
                                 val tripViewModel: TripViewModel = viewModel()
