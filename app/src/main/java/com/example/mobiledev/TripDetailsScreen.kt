@@ -244,7 +244,7 @@ fun ReviewsSection(trip: Trip, tripViewModel: TripViewModel) {
                     Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "- ${review.userId}", // replace with user name later
+                        text = "- ${review.userEmail}", // replace with user name later
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )
@@ -287,9 +287,11 @@ fun AddReview(tripId: String, tripViewModel: TripViewModel) {
         Button(
             onClick = {
                 val userId = auth.currentUser?.uid
+                val userEmail = auth.currentUser?.email ?: "Onbekend"
                 if (userId != null) {
                     val review = Review(
                         userId = userId,
+                        userEmail = userEmail,
                         rating = rating,
                         comment = comment,
                         createdAt = com.google.firebase.Timestamp.now()
